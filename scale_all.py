@@ -4,13 +4,18 @@ from multiprocessing import Pool
 
 import pandas as pd
 
-RAW = "E:/UMUD-data/raw"
+import os
+
+UMUD_RAW = os.environ.get("UMUD_RAW", "E:/UMUD-data/raw")
+UMUD_WORK = os.environ.get("UMUD_WORK", "E:/UMUD-work")
+
+RAW = UMUD_RAW
 SETS = {
     "apo":  f"{RAW}/apo_imgs_v1/apo_images_new_model_v1/*",
     "fasc": f"{RAW}/fasc_imgs_v1/fasc_images_new_model_v1/*",
     "test": f"{RAW}/test_images_v2/test_set_v2/*",
 }
-OUT = "E:/UMUD-work/scale_all.csv"
+OUT = f"{UMUD_WORK}/scale_all.csv"
 
 
 def work(args):

@@ -80,3 +80,12 @@ python infer.py --ckpt runs/neuropixel_s0.pt --split test --out submission.csv
   ruler ticks. The estimator here is an independent, OCR-free reimplementation with explicit
   physiological validation; the competition rules allow reuse of existing code in an improved
   version, and the idea is credited here.
+
+## Configuration
+
+Data locations are read from the environment, so nothing is hard-coded to one machine:
+
+```bash
+export UMUD_RAW=/path/to/competition/data      # the unzipped competition folder
+export UMUD_WORK=/path/to/scratch              # where the working set and CSVs are written
+```

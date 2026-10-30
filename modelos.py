@@ -2,7 +2,7 @@
 
 - `Control`: U-Net clasica (codificador convolucional con submuestreo y decodificador con
   saltos). Es el control profesional del experimento.
-- `NeuroPixelField`: adaptacion fiel de NeuroPixel (D:/PROJECTS/196_NeuroPixel) a un campo
+- `NeuroPixelField`: adaptacion fiel de NeuroPixel (github.com/Agnuxo1) a un campo
   de votacion denso. Conserva sus tres piezas:
     1. `Retina`: convoluciones dilatadas (1,2,4,8), campo receptivo ~31 px y **sin reducir
        resolucion** -> cada pixel recibe un "color" de c_id canales (identidad).

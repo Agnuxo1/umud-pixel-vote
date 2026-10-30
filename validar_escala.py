@@ -16,7 +16,12 @@ import pandas as pd
 
 import roi_scale as R
 
-RAW = "E:/UMUD-data/raw"
+import os
+
+UMUD_RAW = os.environ.get("UMUD_RAW", "E:/UMUD-data/raw")
+UMUD_WORK = os.environ.get("UMUD_WORK", "E:/UMUD-work")
+
+RAW = UMUD_RAW
 
 
 def tamanos(d):
@@ -29,7 +34,7 @@ def tamanos(d):
 
 
 if __name__ == "__main__":
-    sc = pd.read_csv("E:/UMUD-work/scale_all.csv")
+    sc = pd.read_csv(f"{UMUD_WORK}/scale_all.csv")
     am = tamanos("apo_masks_v1/apo_masks_new_model_v1")
     fm = tamanos("fasc_masks_v1/fasc_masks_new_model_v1")
     rows = []
@@ -55,4 +60,4 @@ if __name__ == "__main__":
         print("\npor formato (W x H de la imagen distribuida):")
         print(f.assign(e=err).groupby([f.W, f.H]).agg(n=("e", "size"), real=("aniso_real", "median"),
                                                       medida=("aniso_med", "median"), err=("e", "median")).round(3).to_string())
-    d.to_csv("E:/UMUD-work/validacion_escala.csv", index=False)
+    d.to_csv(f"{UMUD_WORK}/validacion_escala.csv", index=False)
