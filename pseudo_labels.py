@@ -20,14 +20,19 @@ import numpy as np
 import geometria as G
 import roi_scale as S
 
-RAW = "E:/UMUD-data/raw"
+import os
+
+UMUD_RAW = os.environ.get("UMUD_RAW", "E:/UMUD-data/raw")
+UMUD_WORK = os.environ.get("UMUD_WORK", "E:/UMUD-work")
+
+RAW = UMUD_RAW
 
 
 def mask_scale(path_img, mask_shape, cache={}):
     """px/mm en el marco de la mascara (tamano nativo) a partir de la imagen distribuida."""
     if not cache:
         import pandas as pd
-        d = pd.read_csv("E:/UMUD-work/scale_all.csv")
+        d = pd.read_csv(f"{UMUD_WORK}/scale_all.csv")
         d["key"] = d.path.str.replace("\\", "/", regex=False)
         cache.update(d.set_index("key").to_dict("index"))
     r = cache[str(path_img).replace("\\", "/")]
@@ -71,8 +76,8 @@ if __name__ == "__main__":
     fas = sorted(os.path.basename(p) for p in glob.glob(f"{RAW}/fasc_masks_v1/fasc_masks_new_model_v1/*.tif"))[:n]
     da = pd.DataFrame([apo_record(x) for x in apo])
     df = pd.DataFrame([fasc_record(x) for x in fas])
-    da.to_csv("E:/UMUD-work/pseudo_apo.csv", index=False)
-    df.to_csv("E:/UMUD-work/pseudo_fasc.csv", index=False)
+    da.to_csv(f"{UMUD_WORK}/pseudo_apo.csv", index=False)
+    df.to_csv(f"{UMUD_WORK}/pseudo_fasc.csv", index=False)
     print("APO n=%d  escala ok=%.2f  curvas>=2=%.2f  MT mm:" % (len(da), da.sy.notna().mean(), (da.n_curves >= 2).mean()))
     print(da.mt_mm.describe().round(2).to_string())
     print("pendiente profunda (grados):", da.deep_slope_deg.describe().round(2).to_dict())

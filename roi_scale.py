@@ -17,6 +17,11 @@ from __future__ import annotations
 
 import numpy as np
 
+import os
+
+UMUD_RAW = os.environ.get("UMUD_RAW", "E:/UMUD-data/raw")
+UMUD_WORK = os.environ.get("UMUD_WORK", "E:/UMUD-work")
+
 TICK_CANDIDATES_MM = (2.0, 5.0, 10.0)
 DEPTH_RANGE_MM = (20.0, 110.0)      # profundidad plausible del campo de vision
 WIDTH_RANGE_MM = (20.0, 120.0)      # anchura plausible de una sonda lineal
@@ -169,11 +174,11 @@ def measure(path):
 if __name__ == "__main__":
     import glob, sys
     import pandas as pd
-    pats = sys.argv[1:] or ["E:/UMUD-data/raw/test_images_v2/test_set_v2/*.tif",
-             "E:/UMUD-data/raw/test_images_v2/test_set_v2/*.png"]
+    pats = sys.argv[1:] or [f"{UMUD_RAW}/test_images_v2/test_set_v2/*.tif",
+                            f"{UMUD_RAW}/test_images_v2/test_set_v2/*.png"]
     files = [f for p in pats for f in sorted(glob.glob(p))]
     df = pd.DataFrame([measure(f) for f in files])
-    out = "E:/UMUD-work/scale_test.csv"
+    out = f"{UMUD_WORK}/scale_test.csv"
     df.to_csv(out, index=False)
     print(f"n={len(df)}  sy={df.sy.notna().mean():.3f}  sx={df.sx.notna().mean():.3f} -> {out}")
     print(df.groupby([df.W, df.H]).agg(n=("sy", "size"), sy=("sy", "median"), sx=("sx", "median"),

@@ -17,6 +17,11 @@ import numpy as np
 
 import roi_scale as S
 
+import os
+
+UMUD_RAW = os.environ.get("UMUD_RAW", "E:/UMUD-data/raw")
+UMUD_WORK = os.environ.get("UMUD_WORK", "E:/UMUD-work")
+
 _SC = None
 
 
@@ -25,12 +30,12 @@ def scale_of(kind, name):
     global _SC
     if _SC is None:
         import pandas as pd
-        d = pd.read_csv("E:/UMUD-work/scale_all.csv")
+        d = pd.read_csv(f"{UMUD_WORK}/scale_all.csv")
         _SC = {(r["kind"], str(r["name"])): r for _, r in d.iterrows()}
     return _SC[(kind, name)]
 
-RAW = "E:/UMUD-data/raw"
-OUT = "E:/UMUD-work/ds"
+RAW = UMUD_RAW
+OUT = f"{UMUD_WORK}/ds"
 W, H = 384, 256
 
 
