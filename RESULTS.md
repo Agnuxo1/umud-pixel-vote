@@ -47,6 +47,28 @@ for it.
   on the server the orientation IoU stayed at 0.000 while aponeurosis IoU reached 0.42,
   because background covers about 98 % of the pixels. Foreground class weighting was added.
 
+- **The evaluation harness itself measured the wrong thing, and the symptom named the
+  cause.** A first pass in physical units reported angular errors of 83, 74 and 64 degrees
+  by fold, nearly identical across all four architectures. With the angular difference
+  bounded to [0, 90], that is near-systematic perpendicularity, and a quantity that varies
+  with the fold but not with the model cannot be measuring the model. The defect: the harness
+  summed each orientation bin's probability over the **whole image**, background included,
+  and background is about 98 % of the pixels, so it integrated the uniform background bias
+  rather than the predicted orientation. The real inference path never did this -- it weights
+  the bins only inside the band between the two aponeuroses. A first hypothesis, a 90 degree
+  convention mismatch between label and evaluation, was checked in the code and refuted:
+  `orientation_bins` and `dominant_orientation_deg` both apply the `+90` that turns the
+  structure tensor's gradient direction into the structure direction.
+  Every orientation figure from that pass is void. The MT figures in millimetres from the
+  same pass are unaffected and remain valid.
+- **Linearised error propagation for FL is useless once PA error is large.** The same harness
+  propagated `FL = MT/sin(PA)` by linearising around PA = 20 deg. Fed with 80 degree PA
+  errors it returned FL of 300 to 600 mm, outside the physiological range of 30 to 200 mm.
+  A `score_proxy` of 13 to 21 against a leaderboard of 0.24 was visible before the code was
+  read, and should have been the first clue. `evaluar2.py` bounds FL by simulation over the
+  physiological PA range and declares the bound non-informative when the PA error is
+  comparable to that range, instead of printing a meaningless number.
+
 ## 5. Geometry stage, verified against a constructed case
 
 `test_geometria.py` builds a field whose answer is known: two aponeuroses 120 px apart at
