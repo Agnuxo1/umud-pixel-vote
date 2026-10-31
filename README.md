@@ -117,6 +117,16 @@ against the masks' dominant orientation. Because 88.3 % of test images show a si
 ruler and fall back to isotropy, every millimetre and degree here is an optimistic upper bound
 on what the test set would give.
 
+**On the loss.** The quantity the training minimises ranks the arms the other way round: by
+masked cross-entropy the hybrid is worse than the control in 4 of 5 folds and NeuroPixel alone
+is worse than all three others in 5 of 5. Both readings are published side by side in
+`RESULTS.md`; the disagreement between them is the finding, and nothing here claims the loss
+agrees.
+
+**On the audit.** An earlier version of these documents was refuted by an independent review,
+which is how three of the recorded defects were found. The present version has **not yet been
+independently audited**; an audit is scheduled before the competition closes.
+
 **On negative results.** They are kept rather than dropped, including the ones that refuted
 earlier claims of my own: three statements previously published in this repository were wrong
 and are recorded as such, next to the measurements that refuted them. Section 5 of
