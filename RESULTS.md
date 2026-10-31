@@ -2,7 +2,10 @@
 
 **Headline.** The NeuroPixel layer earns its place: added to a U-Net control through a
 zero-initialised gate, it improves muscle thickness in **4 of 5** leave-one-device-out folds
-and is the best of four arms on three of four summary measures. The pipeline reproduces the
+and is the best of four arms on three of four summary measures. The margin survives the two
+checks the uneven fold sizes invite — weighting each fold by its number of images **widens** it
+from 0.27 mm to 0.41 mm, and dropping the smallest fold leaves 3 of 4 wins. The pipeline
+reproduces the
 organizers' metric, recovers the physical scale from the image's own ruler on **93.9 %** of
 training and **80.9 %** of test images, and its geometry stage is verified against a case with
 a known answer to **0.1 deg**. On top of that, the run produced a methodological finding worth
@@ -30,43 +33,72 @@ Selection is separated from reporting: a **second** device group is held out to 
 epoch, the epoch is chosen at the minimum of a 3-epoch moving average, and the reported group
 is **never evaluated during training**.
 
-MT error in millimetres, by reported fold (lower is better):
+MT error in millimetres, by reported fold (lower is better). The folds are device groups and
+are nowhere near the same size, so the count is part of the table:
 
-| fold | control | control_small | hybrid | neuropixel |
-|---|---|---|---|---|
-| 1152x864 | 7.03 | 7.97 | **6.26** | 16.34 |
-| 512x512 | 4.97 | 5.64 | **4.71** | 11.65 |
-| 660x556 | 3.76 | 4.18 | **3.65** | 12.79 |
-| 800x600 | 1.31 | 1.10 | **0.49** | 14.32 |
-| 800x652 | **7.44** | 7.68 | 8.04 | 14.63 |
-| mean | 4.90 | 5.31 | **4.63** | 13.95 |
+| fold | n images | control | control_small | hybrid | neuropixel |
+|---|---|---|---|---|---|
+| 1152x864 | 467 | 7.03 | 7.97 | **6.26** | 16.34 |
+| 512x512 | 139 | 4.97 | 5.64 | **4.71** | 11.65 |
+| 660x556 | 267 | 3.76 | 4.18 | **3.65** | 12.79 |
+| 800x600 | 13 | 1.31 | 1.10 | **0.49** | 14.32 |
+| 800x652 | 72 | **7.44** | 7.68 | 8.04 | 14.63 |
+| mean of folds | | 4.90 | 5.31 | **4.63** | 13.95 |
+| weighted by n | 958 | 5.77 | 6.46 | **5.36** | 14.51 |
 
-Orientation error in degrees, both read-outs, mean over folds:
+Orientation error in degrees, both read-outs (fascicle-mask counts per fold: 424, 66, 147, 72,
+43; 752 in all):
 
 | | control | control_small | hybrid | neuropixel |
 |---|---|---|---|---|
-| free read (no label) | 3.66 | 3.45 | **3.36** | 5.04 |
-| oracle read (uses the label) | 2.49 | 2.40 | 2.23 | **1.78** |
+| free read (no label), mean of folds | 3.66 | 3.45 | **3.36** | 5.04 |
+| free read, weighted by n | 2.61 | **2.44** | **2.44** | 3.27 |
+| oracle read (uses the label), mean of folds | 2.49 | 2.40 | 2.23 | **1.78** |
+| oracle read, weighted by n | 2.54 | 2.15 | 2.22 | **2.08** |
 | metric-shaped proxy, oracle | 1.72 | 1.74 | **1.54** | 3.37 |
 
-**The layer helps.** Paired by fold, the hybrid beats the control on MT in **4 of 5** folds, on
-the oracle angle in **4 of 5**, on the free angle in 3 of 5, and on the proxy in 3 of 5 against
-the control and **5 of 5** against the capacity-matched small control. It is the best of the
-four arms on three of the four summary rows above. The margins are small — a median of
-−0.26 mm on MT — and with five folds no significance is claimed.
+**The layer helps, and weighting by images helps it.** Paired by fold, the hybrid beats the
+control on MT in **4 of 5** folds, on the oracle angle in **4 of 5**, on the free angle in 3 of
+5, and on the proxy in 3 of 5 against the control and **5 of 5** against the capacity-matched
+small control. It is the best of the four arms on three of the four summary measures. The
+margins are small — a median of −0.26 mm on MT — and with five folds no significance is
+claimed.
+
+Two checks that the fold sizes invite, both of which the MT result passes
+(`ponderar_por_n.py`):
+
+- **Weighted by images rather than by fold, the margin widens**, from 0.27 mm to **0.41 mm**
+  (5.77 against 5.36): the hybrid gains most on the *largest* fold, −0.77 mm on the 467-image
+  group, and loses only on the 72-image one. The same holds on the oracle angle, where the
+  hybrid's paired median against the control is −0.28 deg.
+- **It does not rest on the 13-image fold.** That group is the smallest by a factor of five and
+  is also where the hybrid posts its best absolute MT (0.49 mm), so it is the obvious thing to
+  suspect. Dropping every fold under 50 images, the hybrid still wins MT in 3 of 4 with a
+  median of −0.19 mm, and the oracle angle in 3 of 4 with a median of −0.29 deg.
 
 **The training loss ordered the arms backwards.** By masked cross-entropy on the selection
 group the hybrid was *worse* than the control in 4 of 5 folds. In millimetres and degrees it is
 better in 4 of 5. Selecting and concluding by the loss — the normal thing to do — would have
 published the opposite verdict. This is the finding I would keep if I could keep only one.
 
-**NeuroPixel alone localises badly and orients well.** On MT it is worst in all five folds and
-by +9.0 mm of median difference: it does not find the aponeuroses. But on the angle measured
-**inside the true mask** it has the best mean of the four arms, 1.78 deg against the hybrid's
-2.23, and gives the two best absolute values in the whole table (1.41 and 1.68 deg) with
-**58 k parameters against 1.95 M — 33 times fewer**. Its orientation head is good; what it does
-not know is where the fascicle is. That is the architecture's real niche, and it is a different
-one from what this competition rewards.
+**NeuroPixel alone localises badly and orients well.** On the angle measured **inside the true
+mask** it beats its capacity-matched control — the comparison it is designed for, 58 288
+parameters against 122 907 — in **3 of 5** folds with a paired median of **−0.40 deg**, and it
+produces the two best absolute values in the whole table, 1.41 and 1.68 deg. On MT it is the
+worst of the four in all five folds, by +9.0 mm of median difference: it does not find the
+aponeuroses. Its orientation head is good; what it does not know is where the fascicle is.
+That is the architecture's real niche, and it is a different one from what this competition
+rewards.
+
+Against the *large* arms that niche is narrower than the mean suggests, and the correction is
+mine: the 1.78 deg mean in the table is **not** a win over the hybrid when the arms are paired
+by fold. It comes from one group. On 512x512 NeuroPixel alone gives 1.41 deg against the
+hybrid's 3.93, −2.53 deg in a single fold; across the other four it is behind in three, and the
+paired median is **+0.27 deg in the hybrid's favour (2 of 5)**. Weighting by images instead of
+by fold shrinks the gap from 0.45 to 0.14 deg. So "best mean of the four arms" is true of the
+column and misleading about the architectures, exactly the kind of claim an earlier version of
+this file got caught making; the defensible statement is the one against `control_small` above,
+and the 33x parameter saving is measured against a control it does not beat when paired.
 
 ## 2. The official metric, reproduced
 
@@ -133,6 +165,19 @@ Nothing here changes section 1, and all of it was measured the same way.
 
 ### 5.1 What these numbers are and are not
 
+- **Seed spread is not measured, and that is the first thing to ask about a 0.26 mm median.**
+  `train.py` picks the reported fold from the seed (`vg = usables[seed % 5]`), so the five
+  "seeds" of this run are the five device folds with one seed each: the spread between them is
+  between-device variation, not initialisation noise, and nothing here should be read as a
+  standard deviation over seeds. The margins in §1 are therefore **not known to exceed the noise
+  of initialisation**. `run_semillas.py` is the experiment that settles it — same fold, 4
+  architectures x 2 further seeds, 5 folds — and it is queued behind other work on a private
+  GPU server. If it lands before the competition closes, whatever it says goes in §1, including
+  if it says the margin does not survive.
+- **One fold carries 13 images.** The device groups range from 13 to 467 images with an
+  aponeurosis mask (467, 139, 267, 13, 72) and from 43 to 424 with a fascicle mask. A mean over
+  folds is not a mean over images, and the two checks this invites are reported in §1 rather
+  than here because the MT result passes both.
 - **The selection loss says the opposite, and here it is in full.** Masked cross-entropy on the
   selection group, which is the quantity the training actually minimises, ranks the arms the
   other way round: control **0.2267**, control_small 0.2500, hybrid 0.2649, neuropixel 0.3808
@@ -246,6 +291,15 @@ the frame everywhere:
 
 ### 5.4 Defects found in my own earlier work
 
+- **I published a mean as a win without pairing it, which is the mistake the audit had already
+  caught me making twice.** An earlier version of §1 said NeuroPixel alone has "the best mean of
+  the four arms" on the oracle angle, 1.78 deg against the hybrid's 2.23. The column is right
+  and the reading was wrong: paired by fold, that 0.45 deg comes from a single device group
+  (512x512, −2.53 deg), and across the other four NeuroPixel alone is behind in three, paired
+  median **+0.27 deg** against the hybrid. I found this one myself, by weighting the folds by
+  their image counts (`ponderar_por_n.py`) because the groups turned out to range from 13 to 467
+  images. What the check does *not* do is damage the main result: the hybrid's MT margin widens
+  under the same weighting, from 0.27 to 0.41 mm.
 - **The evaluation harness measured the wrong thing, and my first two diagnoses of it were also
   wrong.** A first pass in physical units reported angular errors of 83, 74 and 64 degrees by
   fold, nearly identical across all four architectures. A quantity that varies with the fold but
