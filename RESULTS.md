@@ -14,6 +14,10 @@ calibrated against the Kaggle public leaderboard. Section 5, **Observations**, c
 limits of these numbers, the paths that were measured and discarded, and the defects found in
 my own earlier work — nothing is omitted, it is simply not what the result is.
 
+**Audit status.** An earlier version of this file was refuted by an independent review, which is
+how three of the defects in 5.4 were found. The present version has **not yet been through an
+independent audit**; one is scheduled before the competition closes.
+
 ## 1. What the NeuroPixel layer contributes
 
 Four bodies — U-Net control **1 949 979** params, capacity-matched small control **122 907**,
@@ -129,6 +133,19 @@ Nothing here changes section 1, and all of it was measured the same way.
 
 ### 5.1 What these numbers are and are not
 
+- **The selection loss says the opposite, and here it is in full.** Masked cross-entropy on the
+  selection group, which is the quantity the training actually minimises, ranks the arms the
+  other way round: control **0.2267**, control_small 0.2500, hybrid 0.2649, neuropixel 0.3808
+  (means over folds). Paired by fold, the hybrid is worse than the control in **4 of 5** and
+  NeuroPixel alone is worse than all three others in **5 of 5**, by a wide margin (+0.1541
+  against the control, +0.1308 against the capacity-matched small control, so capacity does not
+  explain it). Section 1 reports the physical units because that is what the competition scores,
+  and the disagreement between the two readings is itself the finding — but both are on the
+  table, and nothing here claims the loss agrees.
+- **The advantage is clearest on MT and on the mask-referenced angle**, 4 of 5 folds each. On the
+  free angle read, which uses no label, the hybrid wins only 3 of 5, and on the metric-shaped
+  proxy 3 of 5 against the control. The result should not be read as a general improvement
+  across all three target quantities: FL is not measurable here at all.
 - **None of this is the official metric.** That needs true PA, FL and MT, which are not
   published for the test set. MT is measured against the masks; the angle against the masks'
   dominant orientation; FL cannot be measured at all because no image carries both mask types,
