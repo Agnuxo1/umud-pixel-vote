@@ -19,9 +19,15 @@ training.
   it is the best of the four arms on three of the four summary measures. Added through a
   zero-initialised gate, at step 0 it *is* the control, so the difference is attributable to the
   layer alone.
-- **NeuroPixel alone localises badly and orients well**: worst of the four on MT, best of the
-  four on the angle measured inside the true mask — 1.78 deg against the hybrid's 2.23 — with
-  **58 k parameters against 1.95 M, 33 times fewer**.
+- **The margin survives weighting.** The folds are device groups ranging from 13 to 467
+  images. Weighted by images instead of by fold the MT margin **widens**, 0.27 mm to 0.41 mm,
+  because the hybrid gains most on the largest group; dropping every fold under 50 images
+  still leaves 3 of 4 wins.
+- **NeuroPixel alone localises badly and orients well**: worst of the four on MT, but on the
+  angle measured inside the true mask it beats its **capacity-matched** control in 3 of 5 folds
+  with a paired median of −0.40 deg, using 58 k parameters against that control's 123 k. It
+  does *not* beat the large arms once they are paired by fold — see the correction in
+  [`RESULTS.md`](RESULTS.md) §1.
 - **The scale is recovered from the scanner's own ruler, without OCR**, on 93.9 % of training
   and 80.9 % of test images, with a 0.29 % median ratio error where both rulers are legible.
 - **The geometry stage is verified against a constructed case** with a known answer: MT exact to
@@ -51,6 +57,8 @@ possible, the **physical scale of each axis has to be recovered from the image i
 | `modelos.py` | four bodies with one identical head: a 1.95 M U-Net control (an smp ResNet-34 is tried first and the fallback now says out loud when it is not available), a capacity-matched 123 k small control, `NeuroPixelField` (58 k), and the hybrid |
 | `train.py` | one vocabulary, partial supervision per image, leave-**two**-devices-out: one group picks the epoch, another is reported and is never evaluated during training |
 | `infer.py` | votes to millimetres and degrees; the geometry stage is identical for every model, so the ablation isolates the contribution of the own layer |
+| `ponderar_por_n.py` | rereads the ablation weighting each fold by its image count, and reports every comparison paired by fold — the folds range from 13 to 467 images, so a mean over folds and a mean over images are not the same number |
+| `run_semillas.py` | seed spread **inside** a fixed fold: `train.py` derives the fold from the seed, so the published run has one seed per fold and no measure of initialisation noise. This pins `--val-group`, moves only the seed, and refuses to report if the cells do not share a fold |
 
 ## The hypothesis under test: NeuroPixel as a per-pixel voting field
 
@@ -128,7 +136,15 @@ which is how three of the recorded defects were found. The present version has *
 independently audited**; an audit is scheduled before the competition closes.
 
 **On negative results.** They are kept rather than dropped, including the ones that refuted
-earlier claims of my own: three statements previously published in this repository were wrong
-and are recorded as such, next to the measurements that refuted them. Section 5 of
-[`RESULTS.md`](RESULTS.md) collects them, together with the three paths that were measured and
-discarded for being no better than the trivial alternative.
+earlier claims of my own: four statements previously published in this repository were wrong
+and are recorded as such, next to the measurements that refuted them — three found by the
+independent review, the fourth found here by pairing a mean I had reported unpaired. Section 5
+of [`RESULTS.md`](RESULTS.md) collects them, together with the three paths that were measured
+and discarded for being no better than the trivial alternative.
+
+**On what is still unmeasured.** There is no measure of seed spread in this repository. Because
+`train.py` derives the reported fold from the seed, the five "seeds" of the published run are
+the five device folds, one seed each, and the margins above are therefore not known to exceed
+initialisation noise. `run_semillas.py` is the experiment that answers it and is queued on a
+private GPU server behind other work; if it has not run by the time the audit does, the
+statement stands as it is written here.
