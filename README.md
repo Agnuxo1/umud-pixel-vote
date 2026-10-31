@@ -105,6 +105,8 @@ catalogues [[15](#ref-15)].
 
 ## What this repository contains
 
+<p align="center"><img src="docs/readme/06b-pipeline.gif" alt="Schematic of the pipeline: ruler scale, one of four model bodies, a per-pixel vote field, inference and the geometry stage producing PA, FL and MT" width="100%"><br><sub>Fig. 6 — The modules in the order they run; the vote field is illustrative. Sources: README module table, infer.py, geometria.py.</sub></p>
+
 | module | role |
 |---|---|
 | `roi_scale.py` | physical scale (px/mm per axis) **without OCR**: finds the scanner's ruler by the regularity of its tick train (multiscale band sweep with a sliding maximum), rejects text columns by peak width, ink fraction and brightness uniformity, and picks the tick value (1/2/5/10 mm) **once for both rulers**, since the scanner prints a single scale |
@@ -117,7 +119,7 @@ catalogues [[15](#ref-15)].
 
 ## The hypothesis under test: NeuroPixel as a per-pixel voting field
 
-<p align="center"><img src="docs/readme/07-neuropixel-layer.gif" alt="Schematic of the retina, the cellular automaton and the tied-dictionary read" width="100%"><br><sub>Fig. 6 — Schematic of the layer under test; the parameter count is measured (modelos.py).</sub></p>
+<p align="center"><img src="docs/readme/07-neuropixel-layer.gif" alt="Schematic of the retina, the cellular automaton and the tied-dictionary read" width="100%"><br><sub>Fig. 7 — Schematic of the layer under test; the parameter count is measured (modelos.py).</sub></p>
 
 [NeuroPixel](https://github.com/Agnuxo1) keeps the whole neural state on a spatial canvas.
 `NeuroPixelField` carries its three defining pieces over to this problem:
@@ -130,7 +132,7 @@ catalogues [[15](#ref-15)].
 3. a **tied-dictionary read applied to every pixel**, which is literally each pixel casting a
    vote for one word of a shared dictionary.
 
-<p align="center"><img src="docs/readme/08-niche.gif" alt="A ledger of five claims about NeuroPixel alone, each with its measured value and a verdict" width="100%"><br><sub>Fig. 7 — What NeuroPixel alone does and does not beat, paired by fold. Data: RESULTS.md §1.</sub></p>
+<p align="center"><img src="docs/readme/08-niche.gif" alt="A ledger of five claims about NeuroPixel alone, each with its measured value and a verdict" width="100%"><br><sub>Fig. 8 — What NeuroPixel alone does and does not beat, paired by fold. Data: RESULTS.md §1.</sub></p>
 
 Here the dictionary is `{background, superficial aponeurosis, deep aponeurosis}` plus
 twenty-four fascicle-orientation bins, with a probability-weighted circular mean interpolating
@@ -140,7 +142,7 @@ state which body each arm used.
 
 ## Reproducing
 
-<p align="center"><img src="docs/readme/09-reproduce.gif" alt="Terminal running the repository's own geometry test: two tests passed in 11.12 seconds" width="100%"><br><sub>Fig. 8 — A real CPU run of test_geometria.py on the published source, 31 Oct 2026.</sub></p>
+<p align="center"><img src="docs/readme/09-reproduce.gif" alt="Terminal running the repository's own geometry test: two tests passed in 11.12 seconds" width="100%"><br><sub>Fig. 9 — A real CPU run of test_geometria.py on the published source, 31 Oct 2026.</sub></p>
 
 The competition data is distributed under CC BY-NC-SA and **may not be redistributed**, so it
 is not included here. Download it from the competition page, then:
@@ -174,7 +176,7 @@ export UMUD_WORK=/path/to/scratch              # where the working set and CSVs 
 
 ## Observations
 
-<p align="center"><img src="docs/readme/10-standing.gif" alt="A ledger separating the account's leaderboard rank from what this repository has produced" width="100%"><br><sub>Fig. 9 — The standing, and what it is not. Data: README, Observations.</sub></p>
+<p align="center"><img src="docs/readme/10-standing.gif" alt="A ledger separating the account's leaderboard rank from what this repository has produced" width="100%"><br><sub>Fig. 10 — The standing, and what it is not. Data: README, Observations.</sub></p>
 
 **On the leaderboard.** The public leaderboard is computed on roughly 102 images and has
 received over 15 000 submissions, while the private test set contains an ultrasound device and
@@ -191,7 +193,7 @@ wrong. By the organizers' re-runnability criterion the relationship is the other
 averaged notebooks are the hard thing to defend, and this pipeline — scale from the image's own
 ruler, the annotation geometry in code, nothing fitted to the leaderboard — is the defensible one.
 
-<p align="center"><img src="docs/readme/11-scale.gif" alt="Bars for per-image ruler coverage and the median ratio error, with three stat tiles" width="100%"><br><sub>Fig. 10 — Physical scale recovered from the image. Data: RESULTS.md §4 and §5.2.</sub></p>
+<p align="center"><img src="docs/readme/11-scale.gif" alt="Bars for per-image ruler coverage and the median ratio error, with three stat tiles" width="100%"><br><sub>Fig. 11 — Physical scale recovered from the image. Data: RESULTS.md §4 and §5.2.</sub></p>
 
 **On the figures above.** None of them is the official metric, which needs labels the
 competition does not publish for the test set; MT is measured against the masks and the angle
@@ -205,13 +207,13 @@ is worse than all three others in 5 of 5. Both readings are published side by si
 `RESULTS.md`; the disagreement between them is the finding, and nothing here claims the loss
 agrees.
 
-<p align="center"><img src="docs/readme/13-defects.gif" alt="Five defects on the left, each paired with the measurement that forced its correction" width="100%"><br><sub>Fig. 12 — Corrections to the author's own earlier work. Data: RESULTS.md §5.4.</sub></p>
+<p align="center"><img src="docs/readme/13-defects.gif" alt="Five defects on the left, each paired with the measurement that forced its correction" width="100%"><br><sub>Fig. 13 — Corrections to the author's own earlier work. Data: RESULTS.md §5.4.</sub></p>
 
 **On the audit.** An earlier version of these documents was refuted by an independent review,
 which is how three of the recorded defects were found. The present version has **not yet been
 independently audited**; an audit is scheduled before the competition closes.
 
-<p align="center"><img src="docs/readme/12-discarded.gif" alt="Bars comparing the anisotropy error of isotropy, image format and device fingerprint" width="100%"><br><sub>Fig. 11 — A measured negative: fingerprinting is worse than doing nothing. Data: RESULTS.md §5.3.</sub></p>
+<p align="center"><img src="docs/readme/12-discarded.gif" alt="Bars comparing the anisotropy error of isotropy, image format and device fingerprint" width="100%"><br><sub>Fig. 12 — A measured negative: fingerprinting is worse than doing nothing. Data: RESULTS.md §5.3.</sub></p>
 
 **On negative results.** They are kept rather than dropped, including the ones that refuted
 earlier claims of my own: four statements previously published in this repository were wrong
@@ -229,7 +231,7 @@ statement stands as it is written here.
 
 ## Real-world applications
 
-<p align="center"><img src="docs/readme/14-applications.gif" alt="Six cards describing settings where these measurements could be reused" width="100%"><br><sub>Fig. 13 — Potential reuse. Nothing here has been deployed or clinically validated.</sub></p>
+<p align="center"><img src="docs/readme/14-applications.gif" alt="Six cards describing settings where these measurements could be reused" width="100%"><br><sub>Fig. 14 — Potential reuse. Nothing here has been deployed or clinically validated.</sub></p>
 
 None of the following has been built, deployed or validated; each is a use that the measurements in this
 repository would support if someone took it up.
@@ -259,7 +261,7 @@ repository would support if someone took it up.
 
 ## Possible improvements
 
-<p align="center"><img src="docs/readme/15-improvements.gif" alt="Measured limitations on the left turning into proposed next experiments on the right" width="100%"><br><sub>Fig. 14 — Each improvement targets a limitation reported in this repository.</sub></p>
+<p align="center"><img src="docs/readme/15-improvements.gif" alt="Measured limitations on the left turning into proposed next experiments on the right" width="100%"><br><sub>Fig. 15 — Each improvement targets a limitation reported in this repository.</sub></p>
 
 - **Measure the seed spread first.** `train.py` derives the reported fold from the seed, so the five "seeds" of
   the published run are the five device folds with one seed each. Until `run_semillas.py` runs, the 0.26 mm
@@ -280,7 +282,7 @@ repository would support if someone took it up.
 
 ## Future work
 
-<p align="center"><img src="docs/readme/16-roadmap.gif" alt="Roadmap with two documented milestones and four proposed next steps" width="100%"><br><sub>Fig. 15 — The two filled markers are documented in this repository; the rest are proposals.</sub></p>
+<p align="center"><img src="docs/readme/16-roadmap.gif" alt="Roadmap with two documented milestones and four proposed next steps" width="100%"><br><sub>Fig. 16 — Filled markers are done; seed spread and the audit are documented as pending; the last two are proposals.</sub></p>
 
 Proposed next steps, not commitments. Only the first two are documented in this repository as done; the others
 are proposals and none is claimed as started:
