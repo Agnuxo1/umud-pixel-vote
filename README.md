@@ -119,6 +119,15 @@ a patient population absent from training. Nothing here is calibrated against th
 leaderboard, and the organizers' own final criterion — whether the submission can be re-run on
 a new dataset where no leaderboard exists — is treated as binding.
 
+**On this account's standing, so it is not misread.** The account holds 5 submissions and sits
+at **rank 32 of 547** on the public leaderboard with 0.24237. None of them came from this
+repository: they are averages of other participants' public notebooks, and **the pipeline in this
+repository has never been submitted**, so its score on the competition's test set is unknown. The
+rank is stated here because it is verifiable and because attributing it to this code would be
+wrong. By the organizers' re-runnability criterion the relationship is the other way round: the
+averaged notebooks are the hard thing to defend, and this pipeline — scale from the image's own
+ruler, the annotation geometry in code, nothing fitted to the leaderboard — is the defensible one.
+
 **On the figures above.** None of them is the official metric, which needs labels the
 competition does not publish for the test set; MT is measured against the masks and the angle
 against the masks' dominant orientation. Because 88.3 % of test images show a single legible
