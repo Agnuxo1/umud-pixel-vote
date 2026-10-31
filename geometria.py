@@ -110,7 +110,15 @@ def dominant_orientation_deg(fasc, weights=None, nbins=180):
     import imutil as U
     f = fasc.astype(np.float32)
     gx, gy = U.sobel_xy(f)
-    w = f if weights is None else weights
+    # NO ponderar por f. Las mascaras de fasciculo son lineas de 2 px de grosor medio, y en
+    # una linea tan fina el gradiente de Sobel es ~0 SOBRE la propia linea: toda la energia
+    # esta en los vecinos, donde f=0. Pesar por f la borraba justo donde esta. Medido con
+    # lineas de respuesta conocida: el error medio era 54,7 deg (una linea horizontal daba
+    # -90 deg, el maximo posible) y sin pesar es 1,6 deg.
+    # `weights` sigue disponible para mapas de probabilidad, donde el fondo SI tiene gradiente
+    # y conviene acotar la region; para una mascara binaria no hace falta, porque el fondo
+    # plano no contribuye.
+    w = 1.0 if weights is None else weights
     jxx = float((gx * gx * w).sum()); jyy = float((gy * gy * w).sum()); jxy = float((gx * gy * w).sum())
     # 0.5*atan2 da la direccion del GRADIENTE; la estructura es perpendicular: +90 grados
     ang = np.degrees(0.5 * np.arctan2(2 * jxy, jxx - jyy)) + 90.0

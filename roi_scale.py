@@ -140,6 +140,33 @@ def choose_tick_mm(span_px, period_px, rng):
     return best
 
 
+def choose_tick_comun(ry, rx):
+    """Un UNICO valor de marca para las dos reglas de la misma imagen.
+
+    El ecografo imprime una sola escala, asi que la marca vertical y la horizontal valen lo
+    mismo: elegirlas por separado es fisicamente imposible. Y pasaba. Midiendo sobre 3697
+    imagenes de entrenamiento con anisotropia nativa conocida:
+
+      marca coincidente (456 imagenes)  -> error relativo de sx/sy del 0,5 % de mediana
+      marca discordante (1717, el 46 %) -> error relativo del 100,6 %
+
+    El caso dominante era tick_x=10 con tick_y=2 (861 imagenes), que mete un factor 2,77 en
+    la razon de escalas y por tanto en todo angulo convertido a milimetros. Aqui se penaliza
+    cada candidato con los DOS rangos fisiologicos a la vez y gana uno solo.
+    """
+    best, bestpen = np.nan, np.inf
+    for t in TICK_CANDIDATES_MM:
+        pen = 0.0
+        for r, rng in ((ry, DEPTH_RANGE_MM), (rx, WIDTH_RANGE_MM)):
+            lo, hi = rng
+            ext = r["span"] / r["period"] * t
+            pen += (0.0 if lo <= ext <= hi else min(abs(ext - lo), abs(ext - hi)))
+            pen += 0.02 * abs(ext - 0.5 * (lo + hi))
+        if pen < bestpen:
+            best, bestpen = t, pen
+    return best
+
+
 def measure(path):
     g = load_gray(path)
     H, W = g.shape
@@ -148,18 +175,40 @@ def measure(path):
     r = dict(path=str(path), H=H, W=W, sx=np.nan, sy=np.nan, tick_y=np.nan, tick_x=np.nan,
              ny=0, nx=0, span_y=np.nan, span_x=np.nan, y0=np.nan, y1=np.nan,
              band_y=np.nan, band_x=np.nan, cov_y=np.nan, cov_x=np.nan)
-    if ry:
-        t = choose_tick_mm(ry["span"], ry["period"], DEPTH_RANGE_MM)
-        ext = ry["span"] / ry["period"] * t
-        if DEPTH_RANGE_MM[0] <= ext <= DEPTH_RANGE_MM[1]:   # si no, no era una regla
-            r.update(sy=ry["period"] / t, tick_y=t, ny=ry["n"], span_y=ry["span"],
-                     y0=ry["first"], y1=ry["last"], band_y=ry["band"][0], cov_y=ry["cov"])
-    if rx:
-        t = choose_tick_mm(rx["span"], rx["period"], WIDTH_RANGE_MM)
-        ext = rx["span"] / rx["period"] * t
-        if WIDTH_RANGE_MM[0] <= ext <= WIDTH_RANGE_MM[1]:
-            r.update(sx=rx["period"] / t, tick_x=t, nx=rx["n"], span_x=rx["span"],
-                     band_x=rx["band"][0], cov_x=rx["cov"])
+    # Con las dos reglas, la marca se elige UNA vez para ambas (ver choose_tick_comun).
+    # Si el valor comun deja una de las dos fuera de su rango fisiologico, esa regla se
+    # reintenta con su propio valor, pero entonces la RAZON sx/sy no vale y se renuncia a
+    # ella imponiendo isotropia. Antes se descartaba la regla entera, y con eso se perdia la
+    # escala vertical de una imagen cuya regla vertical era perfectamente legible: la
+    # cobertura de sy en test bajo del 80,9 % al 55,3 %. Se renuncia a la anisotropia, que es
+    # lo que no se puede saber, no a la escala, que si se ha medido.
+    t_comun = choose_tick_comun(ry, rx) if (ry and rx) else np.nan
+
+    def lee(reg, rango):
+        """(escala, marca, uso_comun) o None. Prueba el valor comun y luego el propio."""
+        for t, comun in ((t_comun, True), (choose_tick_mm(reg["span"], reg["period"], rango), False)):
+            if not np.isfinite(t):
+                continue
+            ext = reg["span"] / reg["period"] * t
+            if rango[0] <= ext <= rango[1]:
+                return reg["period"] / t, t, comun
+        return None
+
+    ly = lee(ry, DEPTH_RANGE_MM) if ry else None
+    lx = lee(rx, WIDTH_RANGE_MM) if rx else None
+    # la razon solo vale si las dos salieron del mismo valor comun
+    razon_fiable = bool(ly and lx and ly[2] and lx[2])
+    if ly:
+        r.update(sy=ly[0], tick_y=ly[1], ny=ry["n"], span_y=ry["span"],
+                 y0=ry["first"], y1=ry["last"], band_y=ry["band"][0], cov_y=ry["cov"])
+    if lx and razon_fiable:
+        r.update(sx=lx[0], tick_x=lx[1], nx=rx["n"], span_x=rx["span"],
+                 band_x=rx["band"][0], cov_x=rx["cov"])
+    elif lx and not ly:
+        # sin regla vertical, la horizontal es la unica escala que hay
+        r.update(sx=lx[0], tick_x=lx[1], nx=rx["n"], span_x=rx["span"],
+                 band_x=rx["band"][0], cov_x=rx["cov"])
+    r["razon_fiable"] = razon_fiable
     # una sola regla: se asume pixel isotropo en el marco nativo (crops y recortes)
     if np.isnan(r["sy"]) and np.isfinite(r["sx"]):
         r["sy"] = r["sx"]; r["iso"] = "sx->sy"
@@ -243,8 +292,20 @@ def huella_equipo(df):
 
 
 def consolidar_huella(df, min_n=3):
-    """Rellena y corrige la escala con la mediana de su huella; si la huella es demasiado
-    pequena, se deja sin escala y la geometria usa su alternativa declarada."""
+    """Rellena y corrige la escala con la mediana de su huella.
+
+    NO CONECTAR A LA CADENA. Medido con la anisotropia nativa como verdad, dejando fuera el
+    grupo de fotograma entero para simular un equipo no visto: propagar la anisotropia por
+    huella da un 26,7 % de error de razon y por formato un 24,1 %, frente al 11,1 % de
+    asumir isotropia. Es decir, es PEOR que no hacer nada. La version que se aprueba sola
+    (estimar la mediana con las mismas filas que luego se miden) daba 0,00 %, que es la
+    trampa: la huella identifica el equipo tan bien que su mediana es la del propio equipo, y
+    cuando el equipo falta transfiere la de otro. Rellenar sy por huella es aun peor: 69,6 %.
+    El test tiene equipos que el entrenamiento no ve, asi que esto no se usa. La unica fuente
+    valida de escala es la lectura directa de las dos reglas (0,29 % de error de razon).
+    Se conserva como registro de un camino medido y descartado, no como opcion.
+
+    """
     import numpy as np
     df = df.copy()
     df["huella"] = huella_equipo(df)
@@ -258,7 +319,9 @@ def consolidar_huella(df, min_n=3):
             malo = m & (df.sy.isna() | (df.sy / med[h] > 1.6) | (df.sy / med[h] < 0.625))
             df.loc[malo, "sy"] = med[h]
             df.loc[malo, "sy_src"] = "huella"
-    # anisotropia: solo cuando las dos reglas coinciden en valor de marca
+    # Anisotropia: solo las imagenes cuyas DOS reglas coinciden en valor de marca sirven
+    # para estimarla, porque el ecografo imprime una sola escala y dos valores distintos son
+    # fisicamente imposibles (ver choose_tick_comun).
     fiable = (df.tick_y == df.tick_x) & df.sx.notna() & df.sy.notna() & (df.cov_y == 1.0) & (df.cov_x == 1.0)
     ratio = (df.sx / df.sy).where(fiable).groupby(df.huella).median()
     for h in df.huella.unique():

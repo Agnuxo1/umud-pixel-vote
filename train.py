@@ -101,10 +101,14 @@ def masked_ce(logits, y, allowed, fg_weight=10.0):
 
 
 @torch.no_grad()
-def evaluate(model, loader, dev, fg_weight=10.0):
+@torch.no_grad()   # sin esto cada forward de validacion construye el grafo entero, que aqui
+                   # no se usa nunca: en un servidor de 15,9 GB sin swap es memoria regalada
+def evaluate(model, loader, dev, fg_weight=10.0, limite=0):
     model.eval()
     inter = np.zeros(VOCAB); union = np.zeros(VOCAB); loss = 0.0; nb = 0
-    for x, y, a in loader:
+    for ib, (x, y, a) in enumerate(loader):
+        if limite and ib >= limite:
+            break
         x, y, a = x.to(dev), y.to(dev), a.to(dev)
         lg = model(x)
         loss += float(masked_ce(lg, y, a, fg_weight)); nb += 1
@@ -127,6 +131,11 @@ def main():
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--steps", type=int, default=12)
     ap.add_argument("--val-group", default="")
+    ap.add_argument("--sel-group", default="")
+    # Prueba de humo: corta cada epoca a N lotes para comprobar en segundos, y en CPU,
+    # que el reparto, el guardado por ventana y la evaluacion funcionan antes de gastar
+    # un turno de cola en veinte entrenamientos.
+    ap.add_argument("--limite-lotes", type=int, default=0)
     ap.add_argument("--fg-weight", type=float, default=10.0)
     ap.add_argument("--out", default="runs")
     a = ap.parse_args()
@@ -143,11 +152,30 @@ def main():
     usables = sorted(tam[(tam.n >= 50) & (tam.tipos == 2)].index)
     if not usables:
         usables = sorted(tam[tam.n >= 50].index) or sorted(tam.index)
+    # Leave-TWO-devices-out. El fallo que la auditoria encontro era que el checkpoint se
+    # guardaba en el minimo del MISMO grupo que luego se informa: la oscilacion entre epocas
+    # de un solo brazo llega a 0,24-0,61 de perdida, frente a diferencias entre brazos de
+    # 0,017, asi que la seleccion elegia ruido y cualquier ablacion leida de ahi estaba
+    # dominada por el. Ahora se apartan DOS grupos: `sg` para elegir la epoca y `vg` para
+    # informar, y `vg` no se evalua ni una vez durante el entrenamiento (lo hace evaluar2.py
+    # despues, sobre el checkpoint ya cerrado). Se aparta otro GRUPO y no una fraccion
+    # aleatoria porque asi la senal de seleccion es fuera de dominio, igual que el informe.
     vg = a.val_group or usables[a.seed % len(usables)]
+    # El grupo de seleccion no puede ser el siguiente de la lista: con ese reparto a dos
+    # semillas les tocaba seleccionar sobre 93 y 120 imagenes, que es justo lo contrario de
+    # reducir el ruido de epoca. Se toma el grupo MAS GRANDE que no sea el del informe ni el
+    # mayor de todos, de modo que el grupo mayor se queda entrenando salvo cuando se informa
+    # sobre el, y la senal de seleccion nunca baja de unos cientos de imagenes.
+    por_tam = list(tam.loc[usables, "n"].sort_values(ascending=False).index)
+    cand = [g for g in por_tam if g != vg and g != por_tam[0]] or [g for g in por_tam if g != vg]
+    sg = a.sel_group or cand[0]
+    if sg == vg:
+        raise SystemExit("el grupo de seleccion y el de informe no pueden ser el mismo")
     groups = usables
-    va = tr_all[tr_all.grupo == vg]
-    tr = tr_all[tr_all.grupo != vg]
-    print(f"grupos_usables={len(groups)} validacion={vg} n_tr={len(tr)} n_va={len(va)}", flush=True)
+    va = tr_all[tr_all.grupo == sg]            # seleccion interna
+    tr = tr_all[~tr_all.grupo.isin([vg, sg])]  # entrenamiento
+    print(f"grupos_usables={len(groups)} informe={vg} seleccion={sg} "
+          f"n_tr={len(tr)} n_sel={len(va)}", flush=True)
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     model = modelos.build(a.arch, VOCAB, **({"steps": a.steps} if a.arch in ("neuropixel", "hybrid") else {})).to(dev)
@@ -162,10 +190,17 @@ def main():
     sch = torch.optim.lr_scheduler.OneCycleLR(opt, a.lr, total_steps=max(1, a.epochs * len(dl)))
     os.makedirs(a.out, exist_ok=True)
     tag = f"{a.arch}_s{a.seed}"
+    # Ventana de 3 epocas: se elige la epoca cuya media movil de perdida de seleccion es
+    # minima, no la epoca individual minima, porque el ruido entre epocas es un orden de
+    # magnitud mayor que el efecto que se quiere medir. Se guarda la epoca CENTRAL de la
+    # ventana ganadora, asi que hay que conservar sus pesos en RAM (en CPU) mientras pasa.
     hist, best = [], 1e9
+    ventana, pesos_ventana = [], []
     for ep in range(a.epochs):
         t0 = time.time(); tot = 0.0; nb = 0
-        for x, y, al in dl:
+        for ib, (x, y, al) in enumerate(dl):
+            if a.limite_lotes and ib >= a.limite_lotes:
+                break
             x, y, al = x.to(dev), y.to(dev), al.to(dev)
             with torch.amp.autocast("cuda", enabled=amp):
                 loss = masked_ce(model(x), y, al, a.fg_weight)
@@ -174,18 +209,28 @@ def main():
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             scaler.step(opt); scaler.update(); sch.step()
             tot += float(loss.detach()); nb += 1
-        vl, iou = evaluate(model, dv, dev, a.fg_weight)
+        vl, iou = evaluate(model, dv, dev, a.fg_weight, limite=a.limite_lotes)
         rec = dict(epoch=ep, train_loss=tot / max(nb, 1), val_loss=vl,
                    iou_apo_sup=float(iou[1]), iou_apo_deep=float(iou[2]),
                    iou_ori_media=float(np.nanmean(iou[3:])), s=round(time.time() - t0, 1))
         hist.append(rec); print(json.dumps(rec), flush=True)
-        if vl < best:
-            best = vl
-            torch.save({"model": model.state_dict(), "arch": a.arch, "vocab": VOCAB,
-                        "steps": a.steps, "seed": a.seed, "val_group": vg}, f"{a.out}/{tag}.pt")
-    json.dump(dict(arch=a.arch, seed=a.seed, val_group=vg, best_val=best, hist=hist,
+        ventana.append(vl)
+        pesos_ventana.append({k: v.detach().to("cpu", copy=True) for k, v in model.state_dict().items()})
+        if len(ventana) > 3:
+            ventana.pop(0); pesos_ventana.pop(0)
+        if len(ventana) == 3:
+            m = float(np.mean(ventana))
+            if m < best:
+                best = m
+                torch.save({"model": pesos_ventana[1], "arch": a.arch, "vocab": VOCAB,
+                            "steps": a.steps, "seed": a.seed, "val_group": vg, "sel_group": sg,
+                            "epoca_central": ep - 1, "sel_loss_media3": m},
+                           f"{a.out}/{tag}.pt")
+    json.dump(dict(arch=a.arch, seed=a.seed, val_group=vg, sel_group=sg,
+                   best_sel_media3=best, hist=hist,
                    params=modelos.n_params(model)), open(f"{a.out}/{tag}.json", "w"), indent=1)
-    print("LISTO", tag, "best_val", round(best, 4), flush=True)
+    print("LISTO", tag, "mejor_media3_seleccion", round(best, 4),
+          "informe_pendiente_en", vg, flush=True)
 
 
 if __name__ == "__main__":
