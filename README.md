@@ -8,6 +8,32 @@ thickness (MT)** from single B-mode ultrasound frames, for the
 Author: Francisco Angulo de Lafuente ([Agnuxo1](https://github.com/Agnuxo1)).
 License: **GPL-3.0** (the licence the competition requires of winning submissions).
 
+## Results
+
+20 runs completed: 4 architectures x 5 leave-one-device-out folds, paired by fold, with the
+epoch picked on a **second** held-out device so the reported group is never seen during
+training.
+
+- **The NeuroPixel layer does help.** The hybrid beats the U-Net control on MT in **4 of 5**
+  folds (4.63 mm against 4.90 mm on average) and on the mask-referenced angle in **4 of 5**, and
+  it is the best of the four arms on three of the four summary measures. Added through a
+  zero-initialised gate, at step 0 it *is* the control, so the difference is attributable to the
+  layer alone.
+- **NeuroPixel alone localises badly and orients well**: worst of the four on MT, best of the
+  four on the angle measured inside the true mask — 1.78 deg against the hybrid's 2.23 — with
+  **58 k parameters against 1.95 M, 33 times fewer**.
+- **The scale is recovered from the scanner's own ruler, without OCR**, on 93.9 % of training
+  and 80.9 % of test images, with a 0.29 % median ratio error where both rulers are legible.
+- **The geometry stage is verified against a constructed case** with a known answer: MT exact to
+  20.00 mm, the orientation of a 1 px line to within 0.1 deg.
+
+The finding worth reading first: **the training loss ordered the arms backwards.** By masked
+cross-entropy the hybrid looked worse in 4 of 5 folds; in millimetres and degrees — what the
+competition pays — it is better in 4 of 5. Selecting and concluding by the loss, the normal
+thing to do, would have published the opposite verdict.
+
+Full numbers, the protocol, and the limits of each figure: [`RESULTS.md`](RESULTS.md).
+
 ## The problem, and why it is not just segmentation
 
 The challenge publishes **no PA/FL/MT labels at all**: the training set contains 1048
@@ -39,31 +65,11 @@ possible, the **physical scale of each axis has to be recovered from the image i
 3. a **tied-dictionary read applied to every pixel**, which is literally each pixel casting a
    vote for one word of a shared dictionary.
 
-Here the dictionary is `{background, superficial aponeurosis, deep aponeurosis}` plus twelve
-fascicle-orientation bins. `NeuroPixelField` has **58 096** parameters against **1 949 583** for
-the U-Net control that actually ran; parameter counts are reported next to every metric, and the table states which body each arm used.
-
-## Honesty about the leaderboard
-
-The public leaderboard is computed on roughly 102 images and has received over 15 000
-submissions, while the private test set contains an ultrasound device and a patient population
-absent from training. Nothing here is calibrated against the public leaderboard, and the
-organizers' own final criterion — whether the submission can be re-run on a new dataset where
-no leaderboard exists — is treated as binding.
-
-## Results
-
-20 runs completed: 4 architectures x 5 leave-one-device-out folds, paired by fold. The
-NeuroPixel layer **does help** — the hybrid beats the control on MT in 4 of 5 folds and is the
-best of the four arms overall — while NeuroPixel alone localises badly and orients well,
-taking the best oracle angle of the four with 33x fewer parameters.
-
-The finding worth reading first: **the training loss ordered the arms backwards.** By masked
-cross-entropy the hybrid looked worse in 4 of 5 folds; in millimetres and degrees it is better
-in 4 of 5.
-
-Negative results are kept, including the ones that refuted earlier claims of my own: three
-published statements here were wrong and are recorded as such. See `RESULTS.md`.
+Here the dictionary is `{background, superficial aponeurosis, deep aponeurosis}` plus
+twenty-four fascicle-orientation bins, with a probability-weighted circular mean interpolating
+inside the bin. `NeuroPixelField` has **58 288** parameters against **1 949 979** for the U-Net
+control that actually ran; parameter counts are reported next to every metric, and the tables
+state which body each arm used.
 
 ## Reproducing
 
@@ -75,6 +81,13 @@ pip install -r requirements.txt
 python prep_dataset.py          # compact 384x256 working set + per-image physical scale
 python run_all.py               # 4 architectures x 5 device folds
 python infer.py --ckpt runs/neuropixel_s0.pt --split test --out submission.csv
+```
+
+Data locations are read from the environment, so nothing is hard-coded to one machine:
+
+```bash
+export UMUD_RAW=/path/to/competition/data      # the unzipped competition folder
+export UMUD_WORK=/path/to/scratch              # where the working set and CSVs are written
 ```
 
 ## Attribution
@@ -90,11 +103,22 @@ python infer.py --ckpt runs/neuropixel_s0.pt --split test --out submission.csv
   physiological validation; the competition rules allow reuse of existing code in an improved
   version, and the idea is credited here.
 
-## Configuration
+## Observations
 
-Data locations are read from the environment, so nothing is hard-coded to one machine:
+**On the leaderboard.** The public leaderboard is computed on roughly 102 images and has
+received over 15 000 submissions, while the private test set contains an ultrasound device and
+a patient population absent from training. Nothing here is calibrated against the public
+leaderboard, and the organizers' own final criterion — whether the submission can be re-run on
+a new dataset where no leaderboard exists — is treated as binding.
 
-```bash
-export UMUD_RAW=/path/to/competition/data      # the unzipped competition folder
-export UMUD_WORK=/path/to/scratch              # where the working set and CSVs are written
-```
+**On the figures above.** None of them is the official metric, which needs labels the
+competition does not publish for the test set; MT is measured against the masks and the angle
+against the masks' dominant orientation. Because 88.3 % of test images show a single legible
+ruler and fall back to isotropy, every millimetre and degree here is an optimistic upper bound
+on what the test set would give.
+
+**On negative results.** They are kept rather than dropped, including the ones that refuted
+earlier claims of my own: three statements previously published in this repository were wrong
+and are recorded as such, next to the measurements that refuted them. Section 5 of
+[`RESULTS.md`](RESULTS.md) collects them, together with the three paths that were measured and
+discarded for being no better than the trivial alternative.
