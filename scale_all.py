@@ -32,7 +32,10 @@ if __name__ == "__main__":
              for f in sorted(glob.glob(pat)) if f.lower().endswith((".tif", ".png"))]
     print("imagenes", len(tasks), flush=True)
     rows = []
-    with Pool(6) as p:
+    # El numero de procesos es configurable: con 6 y ~4 GB libres el PC se queda sin
+    # memoria a mitad de pasada (ArrayMemoryError al reservar 800x652 float32).
+    nproc = int(os.environ.get("UMUD_PROCS", "3"))
+    with Pool(nproc) as p:
         for i, r in enumerate(p.imap_unordered(work, tasks, chunksize=8)):
             rows.append(r)
             if i % 400 == 0:

@@ -16,9 +16,17 @@ pesimista y otra optimista, porque la verdad esta entre las dos:
                 test, y es el analogo honesto de la banda `dentro` de infer.medir cuando
                 no hay aponeurosis que delimite la banda.
   ang_oracle -> pesa cada bin por la mascara de fasciculo VERDADERA. Usa la etiqueta, asi
-                que es un LIMITE OPTIMISTA del cabezal: dice lo buena que es la orientacion
-                alli donde de verdad hay fasciculo, suponiendo resuelto el problema de
-                localizarlo. Nunca se puede presentar como rendimiento del sistema.
+                que no se puede presentar nunca como rendimiento del sistema: dice lo buena
+                que es la orientacion alli donde de verdad hay fasciculo.
+
+CORRECCION MEDIDA. Esta cabecera decia que `ang_oracle` es un "limite optimista" de
+`ang_libre`. No lo es, y lo dice la medida: en el pliegue 1152x864 con 40 imagenes de
+fasciculo, `ang_libre` da 1,19 deg y `ang_oracle` 2,32 deg, es decir el oraculo es PEOR. La
+razon es un sesgo del protocolo, no del modelo: la referencia es la orientacion dominante de
+la mascara ENTERA, o sea una medida global, y `ang_libre` tambien agrega sobre toda la
+imagen, mientras el oraculo se restringe a la region de la mascara y mide algo mas local. La
+referencia favorece a la lectura que se le parece. Asi que las dos lecturas no estan
+ordenadas: son dos medidas distintas, y ninguna acota a la otra.
 
 FL sigue sin poder medirse (ninguna imagen tiene las dos mascaras), pero el v1 lo
 propagaba linealizando FL = MT/sin(PA) en torno a PA = 20 deg, y con errores de PA de 80 deg
@@ -121,8 +129,11 @@ def main():
     meta["grupo"] = meta.Wm.astype(str) + "x" + meta.Hm.astype(str)
     va = meta[(meta.grupo == str(ck["val_group"])) & meta.kind.isin(["apo", "fasc"])]
     if a.max:
-        va = va.head(a.max)
+        # N de CADA tipo, no las N primeras: meta.csv viene ordenado, asi que `head` cogia
+        # solo mascaras de aponeurosis y la medida de angulo salia vacia.
+        va = pd.concat([g.head(a.max) for _, g in va.groupby("kind")], ignore_index=True)
     e_mt, e_libre, e_oracle, mts = [], [], [], []
+    n_sin_escala = 0        # imagenes de fasciculo descartadas por no tener escala
     for _, r in va.iterrows():
         img = U.imread_gray(f"{a.root}/{r['kind']}/img/{r['name']}.png")
         msk = U.imread_gray(f"{a.root}/{r['kind']}/msk/{r['name']}.png")
@@ -136,17 +147,36 @@ def main():
             if not np.isfinite(t):
                 continue
             tm = G.fascicle_angle_deg(t, r["sx"], r["sy"])
+            if not np.isfinite(tm):
+                # Sin escala fisica no hay verdad con la que comparar. Antes solo se
+                # comprobaba que el angulo del MODELO fuera finito, y la verdad NaN entraba
+                # en la lista: un solo valor dejaba la media en NaN, y asi salieron cuatro de
+                # los cinco pliegues. Se cuentan los descartes en vez de esconderlos.
+                n_sin_escala += 1
+                continue
             for fn, acc in ((ang_libre(p), e_libre), (ang_oracle(p, msk), e_oracle)):
                 if np.isfinite(fn):
                     acc.append(dif_angular(G.fascicle_angle_deg(fn, r["sx"], r["sy"]), tm))
-    mae_mt = float(np.mean(e_mt)) if e_mt else float("nan")
-    mae_libre = float(np.mean(e_libre)) if e_libre else float("nan")
-    mae_oracle = float(np.mean(e_oracle)) if e_oracle else float("nan")
+    def media(xs, nombre):
+        """Media que avisa si le han colado un NaN, en vez de devolver NaN en silencio."""
+        if not xs:
+            return float("nan")
+        v = np.asarray(xs, float)
+        malos = int((~np.isfinite(v)).sum())
+        if malos:
+            print(f"AVISO evaluar2: {malos} de {len(v)} valores de {nombre} no son finitos; "
+                  f"se excluyen de la media", flush=True)
+            v = v[np.isfinite(v)]
+        return float(v.mean()) if v.size else float("nan")
+
+    mae_mt = media(e_mt, "MT")
+    mae_libre = media(e_libre, "angulo libre")
+    mae_oracle = media(e_oracle, "angulo oraculo")
     mt0 = float(np.median(mts)) if mts else 20.0
     fl_libre, ok_libre = cota_fl(mae_mt, mae_libre, mt0)
     fl_oracle, ok_oracle = cota_fl(mae_mt, mae_oracle, mt0)
     res = dict(arch=ck["arch"], seed=ck["seed"], val_group=str(ck["val_group"]),
-               n_apo=len(e_mt), n_fasc=len(e_oracle),
+               n_apo=len(e_mt), n_fasc=len(e_oracle), n_fasc_sin_escala=n_sin_escala,
                mae_mt_mm=mae_mt, mt_mediana_mascara=mt0,
                mae_pa_libre_deg=mae_libre, mae_pa_oracle_deg=mae_oracle,
                cota_fl_libre_mm=fl_libre, cota_fl_libre_informativa=ok_libre,

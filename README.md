@@ -20,10 +20,10 @@ possible, the **physical scale of each axis has to be recovered from the image i
 
 | module | role |
 |---|---|
-| `roi_scale.py` | physical scale (px/mm per axis) **without OCR**: finds the scanner's ruler by the regularity of its tick train (multiscale band sweep with a sliding maximum), rejects text columns by peak width, ink fraction and brightness uniformity, and picks the tick value (2/5/10 mm) by physiological range |
+| `roi_scale.py` | physical scale (px/mm per axis) **without OCR**: finds the scanner's ruler by the regularity of its tick train (multiscale band sweep with a sliding maximum), rejects text columns by peak width, ink fraction and brightness uniformity, and picks the tick value (1/2/5/10 mm) **once for both rulers**, since the scanner prints a single scale |
 | `geometria.py` | the challenge's own annotation procedure, in code: MT as the perpendicular distance between the two aponeuroses at three sites, PA as the fascicle angle relative to the **deep** aponeurosis in metric space, FL = MT / sin(PA) (the linear extrapolation the annotators use) |
-| `modelos.py` | three bodies with one identical head: a professional U-Net control, a capacity-matched small control, and `NeuroPixelField` |
-| `train.py` | one vocabulary, partial supervision per image, validation grouped by device fingerprint |
+| `modelos.py` | four bodies with one identical head: a 1.95 M U-Net control (an smp ResNet-34 is tried first and the fallback now says out loud when it is not available), a capacity-matched 123 k small control, `NeuroPixelField` (58 k), and the hybrid |
+| `train.py` | one vocabulary, partial supervision per image, leave-**two**-devices-out: one group picks the epoch, another is reported and is never evaluated during training |
 | `infer.py` | votes to millimetres and degrees; the geometry stage is identical for every model, so the ablation isolates the contribution of the own layer |
 
 ## The hypothesis under test: NeuroPixel as a per-pixel voting field
@@ -41,7 +41,7 @@ possible, the **physical scale of each axis has to be recovered from the image i
 
 Here the dictionary is `{background, superficial aponeurosis, deep aponeurosis}` plus twelve
 fascicle-orientation bins. `NeuroPixelField` has **58 096** parameters against **1 949 583** for
-the professional U-Net control; parameter counts are reported next to every metric.
+the U-Net control that actually ran; parameter counts are reported next to every metric, and the table states which body each arm used.
 
 ## Honesty about the leaderboard
 
@@ -53,8 +53,17 @@ no leaderboard exists — is treated as binding.
 
 ## Results
 
-Reported per parameter, with seeds and variance, as experiments complete. Negative results are
-kept. See `RESULTS.md`.
+20 runs completed: 4 architectures x 5 leave-one-device-out folds, paired by fold. The
+NeuroPixel layer **does help** — the hybrid beats the control on MT in 4 of 5 folds and is the
+best of the four arms overall — while NeuroPixel alone localises badly and orients well,
+taking the best oracle angle of the four with 33x fewer parameters.
+
+The finding worth reading first: **the training loss ordered the arms backwards.** By masked
+cross-entropy the hybrid looked worse in 4 of 5 folds; in millimetres and degrees it is better
+in 4 of 5.
+
+Negative results are kept, including the ones that refuted earlier claims of my own: three
+published statements here were wrong and are recorded as such. See `RESULTS.md`.
 
 ## Reproducing
 
@@ -64,7 +73,7 @@ is not included here. Download it from the competition page, then:
 ```bash
 pip install -r requirements.txt
 python prep_dataset.py          # compact 384x256 working set + per-image physical scale
-python run_all.py               # 4 architectures x 3 seeds
+python run_all.py               # 4 architectures x 5 device folds
 python infer.py --ckpt runs/neuropixel_s0.pt --split test --out submission.csv
 ```
 

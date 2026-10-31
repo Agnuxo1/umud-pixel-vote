@@ -2,7 +2,7 @@
 
 - `Control`: U-Net clasica (codificador convolucional con submuestreo y decodificador con
   saltos). Es el control profesional del experimento.
-- `NeuroPixelField`: adaptacion fiel de NeuroPixel (github.com/Agnuxo1) a un campo
+- `NeuroPixelField`: adaptacion fiel de NeuroPixel (D:/PROJECTS/196_NeuroPixel) a un campo
   de votacion denso. Conserva sus tres piezas:
     1. `Retina`: convoluciones dilatadas (1,2,4,8), campo receptivo ~31 px y **sin reducir
        resolucion** -> cada pixel recibe un "color" de c_id canales (identidad).
@@ -87,8 +87,15 @@ class Control(nn.Module):
             try:
                 import segmentation_models_pytorch as S
                 self.smp = S.Unet("resnet34", encoder_weights=None, in_channels=1, classes=vocab)
-            except Exception:
+            except Exception as exc:
+                # El respaldo NO puede ser silencioso: cambia el brazo de la comparacion sin
+                # avisar. Paso asi: la libreria no estaba en el servidor, se entrenó la U-Net
+                # propia de 1,95 M y se informo como "control profesional ResNet-34", que son
+                # ~24 M. Quien lea una tabla tiene derecho a saber que cuerpo corrio.
+                print(f"AVISO modelos.Control: sin segmentation_models_pytorch ({exc.__class__.__name__}): "
+                      f"se usa la U-Net propia, NO un ResNet-34", flush=True)
                 self.smp = None
+        self.cuerpo = "smp_unet_resnet34" if self.smp is not None else "unet_propia"
         if self.smp is None:
             w = width
             self.e1, self.e2, self.e3, self.e4 = _blk(1, w), _blk(w, 2 * w), _blk(2 * w, 4 * w), _blk(4 * w, 8 * w)

@@ -51,6 +51,32 @@ def test_todo():
     print("FL OK:", round(fl1, 1), round(fl2, 1))
 
 
+def test_orientacion_linea_fina():
+    """Regresion: la orientacion de una linea FINA, que es lo que son las mascaras reales.
+
+    Las mascaras de fasciculo tienen 2 px de grosor medio. En una linea asi el gradiente de
+    Sobel es ~0 sobre la propia linea y toda la energia esta en los vecinos. Una version
+    anterior pesaba el tensor por la mascara y borraba esa energia justo donde estaba: una
+    linea horizontal devolvia -90 grados, el error maximo posible, y el error medio era de
+    54,7 grados. El fallo no lo cazo ningun test porque los casos construidos usaban trazos
+    gruesos. Este test usa lineas de 1 px, que es el regimen real.
+    """
+    errs = []
+    for real in (-60.0, -45.0, 0.0, 45.0, 60.0):
+        H = W = 128
+        ys = (H / 2 + np.tan(np.radians(real)) * (np.arange(W) - W / 2)).round().astype(int)
+        f = np.zeros((H, W), np.float32)
+        ok = (ys >= 0) & (ys < H)
+        f[ys[ok], np.arange(W)[ok]] = 1.0
+        a = G.dominant_orientation_deg(f)
+        d = abs(a - real) % 180.0
+        errs.append(min(d, 180.0 - d))
+    peor = max(errs)
+    assert peor < 8.0, f"orientacion de linea fina rota: peor error {peor:.1f} deg, {errs}"
+    print("orientacion de linea fina OK: peor error %.1f deg" % peor)
+
+
 if __name__ == "__main__":
     test_todo()
+    test_orientacion_linea_fina()
     print("TODAS LAS COMPROBACIONES PASAN")
