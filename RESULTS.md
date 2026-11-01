@@ -250,15 +250,15 @@ With a single legible ruler the `sx/sy` ratio cannot be recovered and isotropy i
 those 2434 training images the median error is **11.1 %**. That is the floor, not a defect, and
 it is why no method below that line was adopted.
 
-**This was the stated upper-bound caveat, and it turned out to be the whole story.** Every
-millimetre and degree in §1 was published as an optimistic upper bound because 88.3 % of the
-test images have a single legible ruler. This pipeline has now been submitted once and scored
-**4.44858** on the public leaderboard, against 0.23862 for an average of public notebooks on the
-same account — eighteen times worse, and the worst of ten submissions. A scale estimator that is
-excellent where two rulers are legible and blind where one is does not transfer to a test set
-built the other way round, and no amount of improvement to the geometry stage above it would
-change that. The caveat was right; what it did not convey is how much of the final score it
-accounted for.
+**The stated upper-bound caveat was right, but it is not the main cause of the test score, and
+I said it was.** This pipeline scored **4.44858** against 0.23862 for an average of public
+notebooks on the same account. My first explanation here blamed the scale estimator's coverage.
+It cannot be: an 11.1 % ratio error yields a score of **0.709**, and 4.45 needs roughly a 70 %
+relative error. The measured breakdown is in §6; scale accounts for the muscle-thickness part of
+it, about 23 %, because the 1 mm tick correction uses training masks and is **not applicable to
+the test set**, where absolute scale therefore goes uncorrected. The other 77 % is the
+orientation head failing to transfer. The caveat was a real limit, honestly stated, and I then
+used it to explain a number it does not explain.
 
 The 1 mm tick correction uses the **training** masks, so it fixes the ground truth the internal
 evaluation is measured against — reporting a 9.9 mm MAE against a truth that is off by a factor
@@ -401,3 +401,48 @@ the frame everywhere:
   MAE. Fed with the 80 deg errors above it returned FL of 300 to 600 mm, outside the
   physiological 30 to 200 mm range. It is now simulated over the physiological PA range and
   declared non-informative instead of printing an absurd number.
+
+## 6. The test score, diagnosed
+
+This pipeline was submitted once and scored **4.44858** on the public leaderboard, against
+**0.23862** for an average of public notebooks on the same account. This section is the
+measurement of why, because a number like that with no explanation is not a result — and because
+my first explanation of it, blaming the scale estimator, was wrong by arithmetic: an 11.1 % ratio
+error gives 0.709, while 4.45 needs roughly a 70 % relative error.
+
+Breakdown, using the public ensemble as a rough stand-in for the hidden truth:
+
+| quantity | this pipeline | ensemble | contribution to the score |
+|---|---|---|---|
+| `fl_mm` | 200.00 | 87.09 | **9.41** of 13.35 — 70 % |
+| `mt_mm` | 30.22 | 20.83 | 3.13 — 23 % |
+| `pa_deg` | 8.17 | 15.92 | 1.29 — 10 % |
+
+**Fascicle length dominates, and its value is exactly the 200 mm clip ceiling.** On the unseen
+test devices the orientation head predicts **horizontal with high confidence**: median fascicle
+angle **0.44 deg** and circular concentration **R = 0.99**, so the model is not uncertain, it is
+confidently wrong. The deep aponeurosis is recovered correctly (median slope −0.65 deg), so
+`PA = |a_f − a_d|` lands near 1 deg, the `pa_lo = 5` clip lifts it, and `FL = MT / sin(5 deg)`
+= 11.5 × MT hits the ceiling in **18 of 30** images.
+
+This is §1.1 taken to its limit rather than a new defect: an orientation head that wins on one
+device (1.42 ± 0.23 deg) and does not win on another does not transfer to scanners it has never
+seen. The capability is real and device-bound, and the test set is built from devices absent from
+training.
+
+Two hypotheses tested and **refuted** on the way, both kept because the wrong ones are part of
+the measurement:
+
+- *That the read-out was at fault* — that `infer.medir` averages orientation over the whole
+  inter-aponeurosis region instead of weighting by predicted fascicle mass. Implemented the
+  alternative: PA 8.73 against 8.34 deg. Identical. Not the read-out.
+- *That the scale was at fault* — ruled out as the dominant cause by the arithmetic above. It
+  does explain the muscle-thickness share: the 1 mm tick correction uses training masks and is
+  not applicable to the test set, so absolute scale goes uncorrected there.
+
+**What can honestly be fixed without retraining:** nothing about the model, but publishing the
+ceiling of a clip is not a prediction. When PA lands on `pa_lo` the estimator has no measurement
+of PA, and dividing by `sin(PA)` turns that absence into 200 mm. `infer.medir` already carries a
+physiological fallback for unresolved geometry; `envio_sin_saturar.py` uses it for this case too,
+and changes nothing else. There is no tuned threshold — "PA hit the clip" is a binary condition
+of the formula itself — and MT is untouched, being a direct measurement of the two curves.

@@ -192,18 +192,27 @@ a new dataset where no leaderboard exists — is treated as binding.
 from this repository. This pipeline *has* now been submitted, once, and it scored **4.44858**:
 eighteen times worse, the worst of the ten submissions on the account.
 
-That number is the point, so it gets stated plainly rather than buried. It is also exactly what
-§5.2 predicted and why that section exists: **88.3 % of the test images show a single legible
-ruler** and fall back to isotropy with an 11.1 % ratio error, so every millimetre and degree
-measured on the training devices was published here as *an optimistic upper bound on what the
-test set would give*. The test set agreed, emphatically. A scale estimator that is excellent
-where two rulers are legible and blind where one is does not transfer to a test set built the
-other way round.
+That number is the point, so it gets stated plainly rather than buried. **And my first
+explanation of it, published here a few hours earlier, was wrong**: I attributed it to the scale
+estimator's coverage. Arithmetic rules that out as the main cause — an 11.1 % ratio error gives a
+score of **0.709**, not 4.45, which needs a ~70 % relative error. §6 has the real diagnosis,
+measured:
 
-So the honest reading of this repository is: a measurement pipeline with a verified geometry
-stage and a verified scale estimator, whose coverage assumption does not hold on this
-competition's test set, plus an architectural finding (§1.1) and two methodological ones (§1.2)
-that do not depend on the ranking at all.
+- **Fascicle length is 70 % of the error**, and its value is exactly the 200 mm clip ceiling. On
+  the unseen test devices the orientation head predicts **horizontal, with high confidence**
+  (circular concentration R = 0.99, median angle 0.4 deg). So `PA = |a_f − a_d|` comes out near
+  1 deg, the clip lifts it to 5, and `FL = MT / sin(PA)` lands on the ceiling in 18 of 30 images.
+  This is the device dependence of §1.1 taken to its limit: a head that wins on one device and
+  not on another does not transfer to devices it has never seen.
+- **Muscle thickness is 23 %**, and *that* part is the scale: the 1 mm tick correction uses
+  training masks and is explicitly not applicable to the test set, so absolute scale goes
+  uncorrected there.
+- Pennation angle is the remaining 10 %.
+
+So the honest reading of this repository is: a measurement pipeline whose geometry stage is
+verified and whose orientation head does not generalise across scanners, published with the
+diagnosis of why, plus an architectural finding (§1.1) and two methodological ones (§1.2) that do
+not depend on the ranking at all.
 
 <p align="center"><img src="docs/readme/11-scale.gif" alt="Bars for per-image ruler coverage and the median ratio error, with three stat tiles" width="100%"><br><sub>Fig. 11 — Physical scale recovered from the image. Data: RESULTS.md §4 and §5.2.</sub></p>
 
