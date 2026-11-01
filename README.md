@@ -249,11 +249,12 @@ independent review, the fourth found here by pairing a mean I had reported unpai
 of [`RESULTS.md`](RESULTS.md) collects them, together with the three paths that were measured
 and discarded for being no better than the trivial alternative.
 
-**On what is still unmeasured.** Seed spread is measured in **2 of the 5** folds, not all five:
-the other three jobs were cancelled in the queue and are re-queued. The conclusion in §1.2 — the
-hybrid's margin is inside its noise — rests on those two, and in one of them the sign reverses,
-which is enough to retract the claim but not enough to put a number on the effect. Whatever the
-remaining three say will go into §1.2 as it comes.
+**On what is still unmeasured.** Seed spread is measured in **2 of the 5** folds and will most
+likely stay there: the other three jobs never ran — the queue rejected them with
+`rejected:project_expired` once this project's window lapsed. The conclusion in §1.2 — the
+hybrid's margin is inside its noise — rests on those two folds, and in one of them the sign
+reverses, which is enough to retract the claim but not enough to put a number on the effect. It is
+stated this way rather than as "pending" because nothing is scheduled to produce the other three.
 
 ## Real-world applications
 
