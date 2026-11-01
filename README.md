@@ -24,38 +24,40 @@ License: **GPL-3.0** (the licence the competition requires of winning submission
 
 <p align="center"><img src="docs/readme/02-results-mt.gif" alt="Heatmap of muscle-thickness error in millimetres for four architectures across five device folds" width="100%"><br><sub>Fig. 1 — MT error by fold, lower is better. Data: RESULTS.md §1.</sub></p>
 
-20 runs completed: 4 architectures x 5 leave-one-device-out folds, paired by fold, with the
-epoch picked on a **second** held-out device so the reported group is never seen during
-training.
+36 runs: 4 architectures x 5 leave-one-device-out folds, plus 2 extra seeds inside each of the 2
+folds measured for seed spread. The epoch is picked on a **second** held-out device, so the
+reported group is never seen during training.
 
-- **The NeuroPixel layer does help.** The hybrid beats the U-Net control on MT in **4 of 5**
-  folds (4.63 mm against 4.90 mm on average) and on the mask-referenced angle in **4 of 5**, and
-  it is the best of the four arms on three of the four summary measures. Added through a
-  zero-initialised gate, at step 0 it *is* the control, so the difference is attributable to the
-  layer alone.
-
-<p align="center"><img src="docs/readme/03-paired-wins.gif" alt="Bars counting the folds the hybrid wins on each measure, out of five" width="100%"><br><sub>Fig. 2 — Folds won, paired by fold. Data: RESULTS.md §1 and ponderar_por_n.py.</sub></p>
-
-- **The margin survives weighting.** The folds are device groups ranging from 13 to 467
-  images. Weighted by images instead of by fold the MT margin **widens**, 0.27 mm to 0.41 mm,
-  because the hybrid gains most on the largest group; dropping every fold under 50 images
-  still leaves 3 of 4 wins.
-- **NeuroPixel alone localises badly and orients well**: worst of the four on MT, but on the
-  angle measured inside the true mask it beats its **capacity-matched** control in 3 of 5 folds
-  with a paired median of −0.40 deg, using 58 k parameters against that control's 123 k. It
-  does *not* beat the large arms once they are paired by fold — see the correction in
-  [`RESULTS.md`](RESULTS.md) §1.
+- **`NeuroPixelField` is a specialised orientation head, and a very good one on one device.**
+  With the fascicle mask given, on the 512x512 device, over 3 seeds: **1.42 ± 0.23 deg** against
+  the U-Net control's 4.58 ± 0.26 and the capacity-matched control's 3.06 ± 0.94. Three times
+  better than a control with **33 times more parameters**, with a margin thirteen times the
+  seed-to-seed spread. On the 1152x864 device it does not win, and on muscle thickness it is the
+  worst of four in every fold: it knows which way a fascicle runs, not where it is.
 - **The scale is recovered from the scanner's own ruler, without OCR**, on 93.9 % of training
   and 80.9 % of test images, with a 0.29 % median ratio error where both rulers are legible.
 - **The geometry stage is verified against a constructed case** with a known answer: MT exact to
   20.00 mm, the orientation of a 1 px line to within 0.1 deg.
 
+<p align="center"><img src="docs/readme/03-paired-wins.gif" alt="Bars counting the folds the hybrid wins on each measure, out of five" width="100%"><br><sub>Fig. 2 — Folds won by the hybrid, paired by fold, <b>one seed per cell</b>. With seeds added these margins fall inside their own noise: see RESULTS.md §1.2.</sub></p>
+
+- **The ablation margin does not survive its own seed noise, and that is now the honest
+  result.** Earlier versions of this file headlined that the layer improves muscle thickness in
+  4 of 5 folds. The counts are right and the design was not: `train.py` ties the fold to the
+  seed, so that pass had one seed per cell. Adding 2 seeds inside a fixed fold, the
+  hybrid−control difference is **−0.518 mm against a standard error of 0.632** on one fold and
+  **+0.616 against 0.927** on the other — the sign flips — so neither clears its noise. The
+  hybrid's three values in 512x512 span 3.01 mm, eleven times the 0.26 mm margin that was
+  published. Retracted in full in [`RESULTS.md`](RESULTS.md) §1.2 and recorded as a defect of
+  mine in §5.4.
+
 <p align="center"><img src="docs/readme/04-loss-vs-metric.gif" alt="Two bar panels showing the training loss and the millimetre error ranking the arms in opposite orders" width="100%"><br><sub>Fig. 3 — The two readings side by side. Data: RESULTS.md §5.1 and §1.</sub></p>
 
-The finding worth reading first: **the training loss ordered the arms backwards.** By masked
-cross-entropy the hybrid looked worse in 4 of 5 folds; in millimetres and degrees — what the
-competition pays — it is better in 4 of 5. Selecting and concluding by the loss, the normal
-thing to do, would have published the opposite verdict.
+- **The training loss orders the arms backwards.** By masked cross-entropy the hybrid looked
+  worse in 4 of 5 folds; in millimetres and degrees — what the competition pays — it looked
+  better in 4 of 5. This one does not depend on any margin clearing its noise: it is about two
+  quantities that should track each other ranking four architectures in opposite orders, and
+  selecting by the loss, the normal thing to do, would invert the conclusion.
 
 Full numbers, the protocol, and the limits of each figure: [`RESULTS.md`](RESULTS.md).
 
@@ -116,6 +118,7 @@ catalogues [[15](#ref-15)].
 | `infer.py` | votes to millimetres and degrees; the geometry stage is identical for every model, so the ablation isolates the contribution of the own layer |
 | `ponderar_por_n.py` | rereads the ablation weighting each fold by its image count, and reports every comparison paired by fold — the folds range from 13 to 467 images, so a mean over folds and a mean over images are not the same number |
 | `run_semillas.py` | seed spread **inside** a fixed fold: `train.py` derives the fold from the seed, so the published run has one seed per fold and no measure of initialisation noise. This pins `--val-group`, moves only the seed, and refuses to report if the cells do not share a fold |
+| `dispersion_semilla.py` | puts the two together: margin against pooled seed spread, per fold, with the standard error of the difference of means. This is the script that retracted the previous headline |
 
 ## The hypothesis under test: NeuroPixel as a per-pixel voting field
 
@@ -222,12 +225,11 @@ independent review, the fourth found here by pairing a mean I had reported unpai
 of [`RESULTS.md`](RESULTS.md) collects them, together with the three paths that were measured
 and discarded for being no better than the trivial alternative.
 
-**On what is still unmeasured.** There is no measure of seed spread in this repository. Because
-`train.py` derives the reported fold from the seed, the five "seeds" of the published run are
-the five device folds, one seed each, and the margins above are therefore not known to exceed
-initialisation noise. `run_semillas.py` is the experiment that answers it and is queued on a
-private GPU server behind other work; if it has not run by the time the audit does, the
-statement stands as it is written here.
+**On what is still unmeasured.** Seed spread is measured in **2 of the 5** folds, not all five:
+the other three jobs were cancelled in the queue and are re-queued. The conclusion in §1.2 — the
+hybrid's margin is inside its noise — rests on those two, and in one of them the sign reverses,
+which is enough to retract the claim but not enough to put a number on the effect. Whatever the
+remaining three say will go into §1.2 as it comes.
 
 ## Real-world applications
 
