@@ -96,8 +96,10 @@ This is the control the study was missing, and the reason the previous headline 
 `train.py` derives the reported fold from the seed, so the published 20-run pass has **one seed
 per fold** and no measure of initialisation noise. `run_semillas.py` pins the fold and moves
 only the seed; `dispersion_semilla.py` compares the margin against the spread. Two of the five
-folds have finished (the other three were cancelled in the queue and are re-queued), giving 3
-seeds per cell:
+folds finished. The other three never ran: the server rejected them with
+`rejected:project_expired` because this project's queue window had lapsed, and a new window is
+not mine to grant — so unless one is assigned, the seed measurement stands at **2 of 5 folds**,
+with 3 seeds per cell:
 
 | fold | n | hybrid − control (MT, mm) | pooled SD | std. error | ratio |
 |---|---|---|---|---|---|
