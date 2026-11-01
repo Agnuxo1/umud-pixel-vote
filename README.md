@@ -187,14 +187,23 @@ a patient population absent from training. Nothing here is calibrated against th
 leaderboard, and the organizers' own final criterion — whether the submission can be re-run on
 a new dataset where no leaderboard exists — is treated as binding.
 
-**On this account's standing, so it is not misread.** The account holds 5 submissions and sits
-at **rank 32 of 547** on the public leaderboard with 0.24237. None of them came from this
-repository: they are averages of other participants' public notebooks, and **the pipeline in this
-repository has never been submitted**, so its score on the competition's test set is unknown. The
-rank is stated here because it is verifiable and because attributing it to this code would be
-wrong. By the organizers' re-runnability criterion the relationship is the other way round: the
-averaged notebooks are the hard thing to defend, and this pipeline — scale from the image's own
-ruler, the annotation geometry in code, nothing fitted to the leaderboard — is the defensible one.
+**On this account's standing, and on what this pipeline actually scores.** The account sits at
+**rank 29 of 558** with **0.23862**, from averaging other participants' public notebooks — not
+from this repository. This pipeline *has* now been submitted, once, and it scored **4.44858**:
+eighteen times worse, the worst of the ten submissions on the account.
+
+That number is the point, so it gets stated plainly rather than buried. It is also exactly what
+§5.2 predicted and why that section exists: **88.3 % of the test images show a single legible
+ruler** and fall back to isotropy with an 11.1 % ratio error, so every millimetre and degree
+measured on the training devices was published here as *an optimistic upper bound on what the
+test set would give*. The test set agreed, emphatically. A scale estimator that is excellent
+where two rulers are legible and blind where one is does not transfer to a test set built the
+other way round.
+
+So the honest reading of this repository is: a measurement pipeline with a verified geometry
+stage and a verified scale estimator, whose coverage assumption does not hold on this
+competition's test set, plus an architectural finding (§1.1) and two methodological ones (§1.2)
+that do not depend on the ranking at all.
 
 <p align="center"><img src="docs/readme/11-scale.gif" alt="Bars for per-image ruler coverage and the median ratio error, with three stat tiles" width="100%"><br><sub>Fig. 11 — Physical scale recovered from the image. Data: RESULTS.md §4 and §5.2.</sub></p>
 
