@@ -440,9 +440,25 @@ the measurement:
   does explain the muscle-thickness share: the 1 mm tick correction uses training masks and is
   not applicable to the test set, so absolute scale goes uncorrected there.
 
-**What can honestly be fixed without retraining:** nothing about the model, but publishing the
-ceiling of a clip is not a prediction. When PA lands on `pa_lo` the estimator has no measurement
-of PA, and dividing by `sin(PA)` turns that absence into 200 mm. `infer.medir` already carries a
-physiological fallback for unresolved geometry; `envio_sin_saturar.py` uses it for this case too,
-and changes nothing else. There is no tuned threshold — "PA hit the clip" is a binary condition
-of the formula itself — and MT is untouched, being a direct measurement of the two curves.
+### 6.1 The clip artefact was 39 % of the score, measured by submitting
+
+Nothing about the model can be fixed without retraining, but **publishing the ceiling of a clip
+is not a prediction**. When PA lands on `pa_lo` the estimator has no measurement of PA, and
+dividing by `sin(PA)` turns that absence into 200 mm. `infer.medir` already carries a
+physiological fallback for unresolved geometry; `envio_sin_saturar.py` uses it for this case too
+and changes nothing else — no tuned threshold ("PA hit the clip" is a binary condition of the
+formula) and MT untouched, being a direct measurement of the two curves.
+
+Submitted. **4.44858 → 2.69767**, a drop of **1.751, or 39.4 %**. So that much of the own
+pipeline's score was the clip artefact and the remaining 2.70 is the model genuinely failing to
+transfer. Of 309 test images, 184 had FL pinned at the ceiling before and none after.
+
+Two things worth stating about this number:
+
+- **Only 56 of 309 images (18 %) yield a real measurement.** 61 do not resolve the geometry at
+  all and 192 land in a clip, so the submission is mostly the fallback. That is what the pipeline
+  can honestly say about this test set, and it is the more informative version of "4.45".
+- **My own forecast was wrong by a point.** Using the public ensemble as a stand-in for the hidden
+  truth predicted ~1.73; the real value is 2.70. The ensemble is a decent reference for ranking
+  the error terms — it did identify FL correctly — but it is not a proxy for the truth, and
+  anything estimated against it should be read as a lower bound on the error.

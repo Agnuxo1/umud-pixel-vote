@@ -209,6 +209,12 @@ measured:
   uncorrected there.
 - Pennation angle is the remaining 10 %.
 
+Acting on that diagnosis: not propagating the clip ceiling into FL takes the own pipeline from
+**4.44858 to 2.69767**, a 39.4 % drop, with 184 of 309 images no longer pinned at 200 mm (§6.1).
+The remaining 2.70 is the model failing to transfer, and only **56 of 309 images** yield a real
+measurement at all — the rest resolve to a fallback. That is the honest size of what this
+pipeline measures on unseen scanners.
+
 So the honest reading of this repository is: a measurement pipeline whose geometry stage is
 verified and whose orientation head does not generalise across scanners, published with the
 diagnosis of why, plus an architectural finding (§1.1) and two methodological ones (§1.2) that do
