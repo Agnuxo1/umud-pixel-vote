@@ -244,11 +244,21 @@ Nothing here changes section 1, and all of it was measured the same way.
   angle and the deep aponeurosis slope, so the two errors can cancel rather than add. The claim
   is withdrawn: the orientation error is a *related* quantity, not a bound.
 
-### 5.2 The irreducible part of the scale
+### 5.2 The irreducible part of the scale — and the test set confirmed it
 
 With a single legible ruler the `sx/sy` ratio cannot be recovered and isotropy is assumed: on
 those 2434 training images the median error is **11.1 %**. That is the floor, not a defect, and
 it is why no method below that line was adopted.
+
+**This was the stated upper-bound caveat, and it turned out to be the whole story.** Every
+millimetre and degree in §1 was published as an optimistic upper bound because 88.3 % of the
+test images have a single legible ruler. This pipeline has now been submitted once and scored
+**4.44858** on the public leaderboard, against 0.23862 for an average of public notebooks on the
+same account — eighteen times worse, and the worst of ten submissions. A scale estimator that is
+excellent where two rulers are legible and blind where one is does not transfer to a test set
+built the other way round, and no amount of improvement to the geometry stage above it would
+change that. The caveat was right; what it did not convey is how much of the final score it
+accounted for.
 
 The 1 mm tick correction uses the **training** masks, so it fixes the ground truth the internal
 evaluation is measured against — reporting a 9.9 mm MAE against a truth that is off by a factor
