@@ -199,8 +199,13 @@ leaderboard, and the organizers' own final criterion — whether the submission 
 a new dataset where no leaderboard exists — is treated as binding.
 
 **On this account's standing, and on what this pipeline actually scores.** The account sits at
-**rank 50 of 606** with **0.23862**, verified on the platform on 7 November 2026, from averaging
-other participants' public notebooks — not from this repository. The same score stood at rank 29
+**rank 50 of 606** with **0.23862**, verified on the platform on 7 November 2026. It comes from a
+fixed-weight average of four prediction families, and **one of the three terms is ours**:
+F1 = (own family (U04+U07)/2 + Honghanhhh + Soukeaizenz) / 3, combined by `ensemble_f1.py`, which
+is in this repository. Corrected on 7 November 2026: this line used to say the score came from
+averaging other participants' notebooks "not from this repository", which understates our share and
+overstates theirs. What is true is that the score is **not** the standalone pipeline this work is
+about, and that two of the four component models are third-party notebooks. The same score stood at rank 29
 of 558 on 31 October: the field advanced and this account did not, so read any standing here as
 dated. This pipeline *has* been submitted, and its best is **2.69767** after the fix in §6.1,
 from **4.44858** before it: eleven times worse than the ensemble, the worst entries on the
