@@ -76,7 +76,7 @@ def main():
     ap.add_argument("--out", default="diagnostico_pa_test.csv")
     a = ap.parse_args()
 
-    ck = torch.load(a.ckpt, map_location="cpu", weights_only=False)
+    ck = torch.load(a.ckpt, map_location="cpu", weights_only=True)
     dev = os.environ.get("UMUD_DEV", "cpu")   # la GPU local solo con autorizacion de Fran
     kw = {"steps": ck.get("steps", 16)} if ck["arch"] in ("neuropixel", "hybrid") else {}
     model = modelos.build(ck["arch"], ck["vocab"], **kw)

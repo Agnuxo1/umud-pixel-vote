@@ -4,3 +4,13 @@ runs/
 runs_sem/
 ds/
 *.pt
+
+# Competition data is CC BY-NC-SA and rule 2.4 forbids redistributing it. These patterns are a
+# guard against committing it by accident, not a substitute for checking: this repository has
+# never contained a data file, in the tree or in its history.
+*.csv
+*.png
+*.tif
+*.tiff
+*.npy
+*.npz

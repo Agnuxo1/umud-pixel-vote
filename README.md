@@ -53,11 +53,13 @@ reported group is never seen during training.
 
 <p align="center"><img src="docs/readme/04-loss-vs-metric.gif" alt="Two bar panels showing the training loss and the millimetre error ranking the arms in opposite orders" width="100%"><br><sub>Fig. 3 — The two readings side by side. Data: RESULTS.md §5.1 and §1.</sub></p>
 
-- **The training loss orders the arms backwards.** By masked cross-entropy the hybrid looked
-  worse in 4 of 5 folds; in millimetres and degrees — what the competition pays — it looked
-  better in 4 of 5. This one does not depend on any margin clearing its noise: it is about two
-  quantities that should track each other ranking four architectures in opposite orders, and
-  selecting by the loss, the normal thing to do, would invert the conclusion.
+- **The training loss and the millimetres disagree on the pair the ablation is about.** By masked
+  cross-entropy the hybrid looked worse in 4 of 5 folds; in millimetres and degrees — what the
+  competition pays — it looked better in 4 of 5, so selecting by the loss, the normal thing to do,
+  would have inverted this study's conclusion. Narrowed on 7 November 2026: this used to say the
+  loss ranks four architectures in the opposite order, and it does not. The rank correlation
+  between the two read-outs is **+0.4**, `NeuroPixelField` is last on both, and the inversion is
+  confined to the control/hybrid pair. See RESULTS.md §1.2 for the numbers and the two limits.
 
 Full numbers, the protocol, and the limits of each figure: [`RESULTS.md`](RESULTS.md).
 
@@ -111,7 +113,7 @@ catalogues [[15](#ref-15)].
 
 | module | role |
 |---|---|
-| `roi_scale.py` | physical scale (px/mm per axis) **without OCR**: finds the scanner's ruler by the regularity of its tick train (multiscale band sweep with a sliding maximum), rejects text columns by peak width, ink fraction and brightness uniformity, and picks the tick value (1/2/5/10 mm) **once for both rulers**, since the scanner prints a single scale |
+| `roi_scale.py` | physical scale (px/mm per axis) **without OCR**: finds the scanner's ruler by the regularity of its tick train (multiscale band sweep with a sliding maximum), rejects text columns by peak width, ink fraction and brightness uniformity, and picks the tick value (**2/5/10 mm**; corrected on 7 November 2026 — the 1 mm candidate is not in the estimator, only in a per-group post-hoc patch computed from training masks and therefore inapplicable to the test set) **once for both rulers**, since the scanner prints a single scale |
 | `geometria.py` | the challenge's own annotation procedure, in code: MT as the perpendicular distance between the two aponeuroses at three sites, PA as the fascicle angle relative to the **deep** aponeurosis in metric space, FL = MT / sin(PA) (the linear extrapolation the annotators use) |
 | `modelos.py` | four bodies with one identical head: a 1.95 M U-Net control (an smp ResNet-34 is tried first and the fallback now says out loud when it is not available), a capacity-matched 123 k small control, `NeuroPixelField` (58 k), and the hybrid |
 | `train.py` | one vocabulary, partial supervision per image, leave-**two**-devices-out: one group picks the epoch, another is reported and is never evaluated during training |
@@ -144,6 +146,15 @@ control that actually ran; parameter counts are reported next to every metric, a
 state which body each arm used.
 
 ## Reproducing
+
+> **Incomplete, and corrected on 7 November 2026.** The sequence below does not reproduce the
+> published numbers as written: `run_all.py` defaults to **10 epochs** and the published pass used
+> **12**; `scale_all.py`, `corregir_marca_por_mt.py --aplicar`, `actualizar_meta_escala.py` and
+> `eval_all2.py` are missing from it; `infer.py` produces the 4.44858 variant, while the submitted
+> 2.69767 comes from `envio_sin_saturar.py`; the checkpoint used for the submission
+> (`hybrid_s0`) is not named; and no weights are distributed (`*.pt` is git-ignored). Training is
+> seeded but not deterministic (AMP, `num_workers=2`), so expect run-to-run variation. Treat this
+> section as the shape of the pipeline, not as a script that regenerates the tables.
 
 <p align="center"><img src="docs/readme/09-reproduce.gif" alt="Terminal running the repository's own geometry test: two tests passed in 11.12 seconds" width="100%"><br><sub>Fig. 9 — A real CPU run of test_geometria.py on the published source, 31 Oct 2026.</sub></p>
 
@@ -188,9 +199,12 @@ leaderboard, and the organizers' own final criterion — whether the submission 
 a new dataset where no leaderboard exists — is treated as binding.
 
 **On this account's standing, and on what this pipeline actually scores.** The account sits at
-**rank 29 of 558** with **0.23862**, from averaging other participants' public notebooks — not
-from this repository. This pipeline *has* now been submitted, once, and it scored **4.44858**:
-eighteen times worse, the worst of the ten submissions on the account.
+**rank 50 of 606** with **0.23862**, verified on the platform on 7 November 2026, from averaging
+other participants' public notebooks — not from this repository. The same score stood at rank 29
+of 558 on 31 October: the field advanced and this account did not, so read any standing here as
+dated. This pipeline *has* been submitted, and its best is **2.69767** after the fix in §6.1,
+from **4.44858** before it: eleven times worse than the ensemble, the worst entries on the
+account.
 
 That number is the point, so it gets stated plainly rather than buried. **And my first
 explanation of it, published here a few hours earlier, was wrong**: I attributed it to the scale
@@ -202,8 +216,11 @@ measured:
   the unseen test devices the orientation head predicts **horizontal, with high confidence**
   (circular concentration R = 0.99, median angle 0.4 deg). So `PA = |a_f − a_d|` comes out near
   1 deg, the clip lifts it to 5, and `FL = MT / sin(PA)` lands on the ceiling in 18 of 30 images.
-  This is the device dependence of §1.1 taken to its limit: a head that wins on one device and
-  not on another does not transfer to devices it has never seen.
+  This is §1.1 taken to its limit: a head that reaches 1.42 deg only when it is handed the
+  fascicle mask has nothing to fall back on when it has to find the fascicles itself. Narrowed on
+  7 November 2026 after the independent audit: the earlier wording made this a claim about
+  *devices*, and the folds are frame-format groups rather than verified scanners — see RESULTS.md
+  §1.1, which also retracts the between-fold comparison of absolute magnitudes.
 - **Muscle thickness is 23 %**, and *that* part is the scale: the 1 mm tick correction uses
   training masks and is explicitly not applicable to the test set, so absolute scale goes
   uncorrected there.
@@ -211,22 +228,33 @@ measured:
 
 Acting on that diagnosis: not propagating the clip ceiling into FL takes the own pipeline from
 **4.44858 to 2.69767**, a 39.4 % drop, with 184 of 309 images no longer pinned at 200 mm (§6.1).
-The remaining 2.70 is the model failing to transfer, and only **56 of 309 images** yield a real
-measurement at all — the rest resolve to a fallback. That is the honest size of what this
-pipeline measures on unseen scanners.
+Only **56 of 309 images** yield a real measurement at all — the rest resolve to a fallback, and
+measured after the audit, **253 of the 309 rows (81.9 %) carry the identical constant fascicle
+length of 70.0 mm**. So 2.69767 is largely the score of a physiological constant.
+
+**Corrected on 7 November 2026.** This paragraph used to call the remaining 2.70 "the model
+failing to transfer". Decomposed per image against the public ensemble — a decomposition that
+reproduces both real scores to within 5 % — the largest term is **thickness at 56 %**, which this
+repository already attributes to uncorrected absolute scale on the test set, with fascicle length
+at 31 % and pennation angle at 13 %. The orientation head's failure to transfer is real and is
+not the dominant term. It is the same class of error as the one already recorded about the 4.45:
+proposing a cause without checking that it produces the magnitude observed.
 
 So the honest reading of this repository is: a measurement pipeline whose geometry stage is
-verified and whose orientation head does not generalise across scanners, published with the
-diagnosis of why, plus an architectural finding (§1.1) and two methodological ones (§1.2) that do
-not depend on the ranking at all.
+verified, whose absolute scale is uncorrected on the test set, and whose orientation head only
+reaches its headline accuracy when the fascicle mask is handed to it, published with the diagnosis
+of why, plus an architectural finding (§1.1) and two methodological ones (§1.2) that do not depend
+on the ranking at all.
 
 <p align="center"><img src="docs/readme/11-scale.gif" alt="Bars for per-image ruler coverage and the median ratio error, with three stat tiles" width="100%"><br><sub>Fig. 11 — Physical scale recovered from the image. Data: RESULTS.md §4 and §5.2.</sub></p>
 
 **On the figures above.** None of them is the official metric, which needs labels the
 competition does not publish for the test set; MT is measured against the masks and the angle
-against the masks' dominant orientation. Because 88.3 % of test images show a single legible
-ruler and fall back to isotropy, every millimetre and degree here is an optimistic upper bound
-on what the test set would give.
+against the masks' dominant orientation. Because most test images show a single legible ruler and
+fall back to isotropy, every millimetre and degree here is an optimistic upper bound on what the
+test set would give. Corrected on 7 November 2026: this said 88.3 %, which counted the images with
+no readable scale as single-ruler ones. Of 309 test images, **5.2 % have two legible rulers, 75.7 %
+have one, and 19.1 % have no readable scale**.
 
 **On the loss.** The quantity the training minimises ranks the arms the other way round: by
 masked cross-entropy the hybrid is worse than the control in 4 of 5 folds and NeuroPixel alone
@@ -278,24 +306,35 @@ repository would support if someone took it up.
 - **Protocols that hold out whole devices.** A new scanner is what the private test set imposes, and grouped
   hold-out is the validation that matches it [[16](#ref-16)]. The fingerprint result shows concretely what a random
   split would have hidden [[17](#ref-17)].
-- **Annotation geometry as a reference implementation.** The challenge's own procedure — perpendicular
-  thickness at three sites, the fascicle angle relative to the deep aponeurosis in metric space, FL = MT /
-  sin(PA) — is in code and verified against a constructed case to 0.1 degrees, so it can be reused where
-  reliability of manual reading is the limiting factor [[3](#ref-3), [4](#ref-4)].
+- **Annotation geometry as a reference implementation.** Perpendicular thickness at three sites and the
+  fascicle angle relative to the deep aponeurosis in metric space are the challenge's own definitions; the
+  extrapolation **FL = MT / sin(PA)** is ours, and is only equivalent to the stated procedure when the two
+  aponeuroses are parallel. Corrected on 7 November 2026: this section used to present the formula as the
+  challenge's procedure too, and the official rules describe manual annotation with "established
+  extrapolation procedures" without stating it. All three are in code and verified against a constructed case
+  to 0.1 degrees, so they can be reused where reliability of manual reading is the limiting factor
+  [[3](#ref-3), [4](#ref-4)].
 - **Published negative results.** The discarded paths carry their numbers, so other entrants can skip them
   rather than measure them again; the same openness is what the maintained ultrasound packages have given the
   field [[7](#ref-7)].
 
 ## Possible improvements
 
-<p align="center"><img src="docs/readme/15-improvements.gif" alt="Measured limitations on the left turning into proposed next experiments on the right" width="100%"><br><sub>Fig. 15 — Each improvement targets a limitation reported in this repository.</sub></p>
+<p align="center"><img src="docs/readme/15-improvements.gif" alt="Measured limitations on the left turning into proposed next experiments on the right" width="100%"><br><sub>Fig. 15 — Each improvement targets a limitation reported in this repository. Rendered before 7 November 2026, so it still shows the seed-spread item as pending; the text below it is current.</sub></p>
 
-- **Measure the seed spread first.** `train.py` derives the reported fold from the seed, so the five "seeds" of
-  the published run are the five device folds with one seed each. Until `run_semillas.py` runs, the 0.26 mm
-  paired median on muscle thickness is not known to exceed initialisation noise, and no amount of further
-  architecture work is worth more than settling that.
-- **Build the isotropy detector, not a better estimator.** 88.3 % of test images show a single legible ruler and
-  fall back to isotropy, at an 11.1 % median ratio error. The spectral estimator wins on the median and the p90
+- ~~**Measure the seed spread first.**~~ **Done, and it refuted the margin.** `train.py` derives the
+  reported fold from the seed, so the five "seeds" of the published run were the five folds with one seed
+  each. `run_semillas.py` has since run in two folds with three seeds: the 0.26 mm paired median on muscle
+  thickness does **not** exceed initialisation noise and in one fold the sign flips, so that claim is
+  retracted in RESULTS.md §1.2. The remaining three folds never ran — the queue window lapsed — and the
+  measurement stands at 2 of 5 folds. Left here, struck through rather than deleted, because this item
+  predicted its own outcome correctly.
+- **Build the isotropy detector, not a better estimator.** 75.7 % of test images show a single legible ruler
+  and fall back to isotropy, at an 11.1 % median ratio error (corrected from 88.3 % on 7 November 2026; a
+  further 19.1 % have no readable scale at all). A second defect found by the same audit belongs here: the
+  `razon_fiable` flag is wrong on most of what it flags — in the 1152x864 fold, 71 of 72 flagged-reliable
+  fascicle images carry a ratio between 0.067 and 0.493 where the frame implies 1.125 — so the detector has
+  to replace that flag, not merely supplement it. The spectral estimator wins on the median and the p90
   and loses on the mean, and the Nyquist peak reaches 100 % precision at only 17.3 % recall: what is missing is
   recall on the detector.
 - **Give the orientation head a localiser.** NeuroPixel alone is the worst of the four arms on muscle thickness
@@ -309,7 +348,7 @@ repository would support if someone took it up.
 
 ## Future work
 
-<p align="center"><img src="docs/readme/16-roadmap.gif" alt="Roadmap with two documented milestones and four proposed next steps" width="100%"><br><sub>Fig. 16 — Filled markers are done; seed spread and the audit are documented as pending; the last two are proposals.</sub></p>
+<p align="center"><img src="docs/readme/16-roadmap.gif" alt="Roadmap with two documented milestones and four proposed next steps" width="100%"><br><sub>Fig. 16 — Infographic rendered before 7 November 2026: it shows the seed spread and the independent audit as pending, and both have since happened — the seed spread refuted the thickness margin and the audit returned 26 findings. The list below this figure is current; the image is not.</sub></p>
 
 Proposed next steps, not commitments. Only the first two are documented in this repository as done; the others
 are proposals and none is claimed as started:
@@ -318,8 +357,9 @@ are proposals and none is claimed as started:
    degrees (`test_geometria.py`).
 2. *Documented.* The 20-run ablation, 4 architectures across 5 leave-one-device-out folds, with the epoch
    chosen on a second held-out device.
-3. Run the seed experiment `run_semillas.py` — same fold, further seeds — and publish whatever it says about
-   the margins in §1, including if it says they do not survive.
+3. *Documented, and it did not survive.* The seed experiment `run_semillas.py` ran in two of the five
+   folds with three seeds each, and the margin on muscle thickness landed inside its own noise with the sign
+   flipping in one fold, so the claim was retracted in RESULTS.md §1.2. The other three folds never ran.
 4. Put the present documents through the independent audit the repository says is scheduled before the
    competition closes.
 5. Submit the pipeline itself, so that its score on the competition's test set stops being unknown

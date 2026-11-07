@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: "umud-pixel-vote: a specialised orientation head for muscle ultrasound, with its own refutations"
+message: "If you use this software or its findings, please cite it as below."
+type: software
+authors:
+  - family-names: "Angulo de Lafuente"
+    given-names: "Francisco"
+    alias: "Agnuxo1"
+repository-code: "https://github.com/Agnuxo1/umud-pixel-vote"
+license: GPL-3.0-or-later
+keywords:
+  - muscle-ultrasound
+  - pennation-angle
+  - fascicle-length
+  - muscle-thickness
+  - image-segmentation
+  - physical-scale-recovery
+  - neural-cellular-automata
+  - ablation-study
+abstract: >-
+  Code and measurements for the UMUD Challenge (Muscle Architecture in Ultrasound Data).
+  NeuroPixelField is a specialised orientation head: given the true fascicle mask it measures
+  fascicle orientation to 1.42 +/- 0.23 degrees on the 512x512 fold, three times better than a
+  control with 33 times more parameters, over three seeds. Without that mask it is the worst of
+  the four arms, and on muscle thickness it is the worst in all five folds, so the capability is
+  a component's and not the finished system's. Around it: physical scale recovered from the
+  scanner's own ruler without OCR, and a geometry stage verified to 0.1 degrees. Two
+  methodological findings are reported in full: the training loss orders the architectures
+  backwards with respect to the millimetres and degrees the task is scored on, and the ablation
+  margin on muscle thickness does not survive its own seed noise, which retracted this work's
+  own earlier headline. The repository contains no competition data.

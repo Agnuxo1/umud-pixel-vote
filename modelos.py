@@ -78,7 +78,10 @@ def _blk(a, b):
 
 class Control(nn.Module):
     """U-Net de referencia. Si `segmentation_models_pytorch` esta disponible se usa su
-    U-Net ResNet-34, que es la herramienta profesional estandar para este problema."""
+    U-Net ResNet-34 cuando `segmentation_models_pytorch` esta disponible, y la U-Net propia de
+    1,95 M cuando no lo esta, que es lo que ocurrio en la pasada publicada: ver el aviso de
+    `__init__`. CORRECCION 7-11-2026: esta linea decia "la herramienta profesional estandar",
+    descripcion retractada en RESULTS.md 5.4 porque el control informado NO fue un ResNet-34."""
 
     def __init__(self, vocab, width=32, smp=True):
         super().__init__()
@@ -132,7 +135,8 @@ class Hybrid(nn.Module):
 
 
 def build(arch, vocab, **kw):
-    """`control` = U-Net profesional; `control_small` = misma U-Net con la capacidad del
+    """`control` = U-Net de referencia (NO un ResNet-34 en la pasada publicada, ver aviso de
+    `Control.__init__`); `control_small` = misma U-Net con la capacidad del
     modelo propio, para que la comparacion no la gane el numero de parametros."""
     if arch == "control_small":
         kw = {k: v for k, v in kw.items() if k != "steps"}

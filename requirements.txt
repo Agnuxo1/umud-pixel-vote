@@ -4,3 +4,4 @@ opencv-python-headless>=4.9
 pandas>=2.1
 torch>=2.4
 scikit-image>=0.22
+pytest>=8.0  # test_geometria.py

@@ -3,7 +3,10 @@
 **Competition:** [UMUD Challenge: Muscle Architecture in Ultrasound Data](https://www.kaggle.com/competitions/umud-challenge-muscle-architecture-in-ultrasound-data)
 **Team:** Francisco Angulo de Lafuente (Agnuxo1)
 **Date:** 31 October 2026
-**Best public Kaggle score:** **0.23862** (submission **57852101**, provisional public leaderboard position **29**).
+**Best public Kaggle score:** **0.23862** (submission **57852101**). Provisional public standing,
+re-verified on the platform on **7 November 2026: rank 50 of 606**, leader 0.16307. It was 29 of
+558 on 31 October with the leader at 0.18297 — the score has not changed and the field has
+advanced, so read any standing here as dated.
 **Winner eligibility:** NOT YET CERTIFIED. Full end-to-end reproducibility on new images remains a mandatory separate check.
 
 ## What F1 actually does
@@ -20,11 +23,13 @@ This formula is applied separately to **pennation angle**, **fascicle length**, 
 coefficient. The original input model families must themselves be runnable on new images.
 
 - **U04:** Our inner-aponeurosis-border fascicle length adaptation of the public
-  `watehell/ans-is-simple-physical-scale-u-net-geometry` approach. Source currently archived
-  under the original UMUD project sprint's `codigo/k_u04/`.
+  `watehell/ans-is-simple-physical-scale-u-net-geometry` approach. Source archived under the
+  original UMUD project sprint's `codigo/k_u04/`, **outside this repository**. It loads two
+  third-party checkpoints under CC BY-NC-SA 4.0 and installs an OCR package without pinning a
+  version — see `F1_REEXECUTION_DOSSIER.md`.
 - **U07:** Our own UNet++/EfficientNet-B3 trained on the competition's disclosed
-  aponeurosis and fascicle masks, followed by U04's geometrical measurement stage. Source
-  currently archived under `codigo/k_u07/`.
+  aponeurosis and fascicle masks, followed by U04's geometrical measurement stage. Source archived
+  under `codigo/k_u07/`, **outside this repository**. It starts from ImageNet encoder weights.
 - **Honghanhhh:** Public Kaggle `umud-pipeline-v2-lb-0-3389` model family.
 - **Soukeaizenz:** Public Kaggle `anatomynet-biomechanical-u-net-0-399-1-sota` model family.
 
