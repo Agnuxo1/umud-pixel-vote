@@ -1,4 +1,11 @@
-"""Evaluacion local honesta de un modelo, sin tocar el leaderboard.
+"""SUPERADO por `evaluar2.py`. Se conserva publicado, no se usa.
+
+Esta es la version 1 del evaluador. Tiene el defecto documentado en RESULTS.md 5.4 (G-06): una
+media envenenada por NaN dejaba el angulo sin medir en cuatro de los cinco pliegues. Ninguna cifra
+publicada sale de aqui; todas salen de `evaluar2.py`. Queda en el repo porque el defecto y su
+correccion son parte del registro, no para ejecutarse.
+
+Evaluacion local honesta de un modelo, sin tocar el leaderboard.
 
 El reto no publica PA/FL/MT, asi que no se puede calcular la metrica oficial en local. Lo
 que SI se puede medir, cada cosa donde existe su etiqueta:
@@ -73,7 +80,7 @@ def main():
     a = ap.parse_args()
     import pandas as pd
     import modelos
-    ck = torch.load(a.ckpt, map_location="cpu", weights_only=False)
+    ck = torch.load(a.ckpt, map_location="cpu", weights_only=True)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     kw = {"steps": ck.get("steps", 12)} if ck["arch"] in ("neuropixel", "hybrid") else {}
     model = modelos.build(ck["arch"], ck["vocab"], **kw)

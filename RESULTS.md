@@ -1,22 +1,38 @@
 # Results
 
-**Headline.** `NeuroPixelField` is a **specialised orientation head**, and on one ultrasound
-device it is very good at that job: with the fascicle mask given, it measures fascicle
-orientation to **1.42 ± 0.23 deg** against the U-Net control's **4.58 ± 0.26** and the
-capacity-matched control's **3.06 ± 0.94** — three times better than a control with **33 times
-more parameters**, over 3 seeds, with a margin thirteen times the seed-to-seed spread. On a
-different device it does not win at all, and on muscle thickness it is the worst of four arms
-in every fold: it knows which way a fascicle runs, not where it is. That split — excellent
-orientation, poor localisation, and both device-dependent — is the finding, and it is a
-different capability from the one this competition ranks.
+**Headline.** `NeuroPixelField` is a **specialised orientation head that has to be handed the
+fascicle mask.** Given the true mask, on the 512x512 fold, it measures fascicle orientation to
+**1.42 ± 0.23 deg** against the U-Net control's **4.58 ± 0.26** and the capacity-matched
+control's **3.06 ± 0.94** — three times better than a control with **33 times more parameters**,
+over 3 seeds, with a margin thirteen times the seed-to-seed spread. Read the same angle
+**without the label**, which is the only reading a real pipeline has, and it is the **worst of
+the four arms** in that same fold: **9.51 deg** against the control's 8.08 and the
+capacity-matched control's 5.94. On muscle thickness it is the worst of four in every fold, by
++9.0 mm of median difference: it does not find the aponeuroses at all.
+
+So the capability is real, reproducible and cheap, and it is **not a capability of the finished
+system**: a head that needs the answer handed to it is a component, not a pipeline. That split is
+the finding, and it is a different capability from the one this competition ranks. Two bounds on
+it, both added after the independent audit of 7 November 2026: against the capacity-matched
+control the oracle margin is 1.64 deg, **t = 2.95 with 4 degrees of freedom** (p ≈ 0.04,
+uncorrected for five folds and several comparisons), so the thirteen-times figure holds against
+the large control only; and the folds are **frame-format groups, not verified devices** (§1.1).
 
 Around it, a pipeline that stands on its own: the organizers' metric reproduced, the **physical
 scale recovered from the scanner's own ruler without OCR** on 93.9 % of training and 80.9 % of
 test images with a 0.29 % median ratio error, and a geometry stage verified against a
-constructed case to **0.1 deg**.
+constructed case to **0.1 deg**. That 0.1 deg is the worst error the test measures and prints; the assertion it
+guards with is the looser `< 8.0 deg`, and the fascicle-length leg of the same test is circular,
+since it feeds back the pennation angle the test just measured.
 
-And two methodological findings that outlast the ranking. First, **the training loss orders the
-architectures backwards** with respect to the millimetres and degrees the competition pays.
+And two methodological findings that outlast the ranking. First, **the training loss and the
+millimetres disagree on exactly the pair the ablation is about** — by masked cross-entropy the
+hybrid is worse than the control, in millimetres and degrees it is better — so selecting by the
+loss, the normal thing to do, would have inverted this study's conclusion. Narrowed on 7 November
+2026: this said the loss orders the architectures *backwards*, and it does not. Across all four
+arms the two read-outs agree more than they disagree (Spearman +0.4; `NeuroPixelField` is last on
+both), the inversion is confined to the control/hybrid pair, and the two quantities are measured
+on different populations — the loss on the selection group, the millimetres on the reported fold.
 Second, and this one cost me the previous version of this paragraph: **the ablation margin does
 not survive its own seed noise.** Measuring seed spread inside a fixed fold — the control this
 study was missing — the hybrid's advantage on muscle thickness lands *inside* the noise in both
@@ -30,13 +46,21 @@ limits of these numbers, the paths that were measured and discarded, and the def
 my own earlier work — nothing is omitted, it is simply not what the result is.
 
 **Audit status.** An earlier version of this file was refuted by an independent review, which is
-how three of the defects in 5.4 were found. The present version has **not yet been through an
-independent audit**; one is scheduled before the competition closes.
+how three of the defects in 5.4 were found. A **second independent audit, with clean context, ran
+on 7 November 2026** and returned 26 findings: **no critical blocker**, 11 correctable, 7
+scientific limitations, 8 minor. It confirmed as exactly reproducible every table in §1, the
+seed-dispersion table, the selection loss, the parameter counts, the absence of selection/
+evaluation leakage, the scale coverage, the geometry tests and all the submission figures. What it
+refuted or narrowed is corrected in place throughout this file, each time next to the statement it
+replaces. The audit of the remaining third-party component licences is still outstanding.
 
 ## 1. What the NeuroPixel layer contributes
 
 Four bodies — U-Net control **1 949 979** params, capacity-matched small control **122 907**,
-`NeuroPixelField` **58 288**, hybrid **2 009 752** — trained on 5 leave-one-device-out folds,
+`NeuroPixelField` **58 288**, hybrid **2 009 752** — trained on 5 folds that each hold out **two**
+frame-format groups, one to report and one to pick the epoch (called leave-one-device-out
+elsewhere in this repository, which undercounts the held-out groups and overstates that the groups
+are devices),
 20 runs in total. The hybrid mixes the NeuroPixel layer into the control through a
 zero-initialised 1x1 convolution, so **at step 0 it is exactly the control**: any difference
 is attributable to the layer and to nothing else.
@@ -81,14 +105,52 @@ On the angle measured **inside the true mask**, on the 512x512 device, over **3 
 | hybrid | 2 009 752 | 3.94 | ± 0.89 |
 
 Three times better than a control with 33 times the parameters, and the margin is **thirteen
-times the seed-to-seed spread** — this is not a one-seed accident. On the 1152x864 device the
-same arm does **not** win (2.62 ± 0.83 against the small control's 1.94 ± 0.10), and on muscle
-thickness it is the worst of the four in all five folds, by +9.0 mm of median difference: it
-does not find the aponeuroses at all.
+times the seed-to-seed spread** — this is not a one-seed accident. Against the capacity-matched
+control, though, the same margin is 1.64 deg at t = 2.95 with 4 degrees of freedom: real but not
+firm. And on muscle thickness this arm is the worst of the four in all five folds, by +9.0 mm of
+median difference: it does not find the aponeuroses at all.
 
-So the capability is real, measured, cheap, and **device-dependent**: an orientation head, not a
-muscle-architecture model. Nothing here claims it generalises to devices it has not seen — the
-opposite is what the two folds show.
+**The same angle without the label.** The oracle column above is measured inside the true mask.
+The free reading, which is what the pipeline actually has, reverses the result in this very fold:
+
+| arm | oracle angle (deg) | free read, no label (deg) |
+|---|---|---|
+| `NeuroPixelField` | **1.42 ± 0.23** | 9.02 ± 0.54 |
+| capacity-matched control | 3.06 ± 0.94 | **5.57 ± 0.51** |
+| U-Net control | 4.58 ± 0.26 | 8.14 ± 0.43 |
+| hybrid | 3.94 ± 0.89 | 6.29 ± 3.50 |
+
+Weighted by image count over the five folds the same holds: 3.27 deg against the capacity-matched
+control's 2.44 (§1, table). So the layer is excellent at reading an orientation it is shown and
+the worst of the four at finding one by itself.
+
+**What the audit retracted here, on 7 November 2026: the between-fold reading.** This section
+used to say that the arm "does not win on the 1152x864 device" and that the capability is
+therefore *device-dependent*, resting on the contrast between absolute magnitudes across folds.
+Two defects, both measured:
+
+- **The scale ratio is wrong where it claims to be reliable.** In the 1152x864 fold, **71 of the
+  72** fascicle images flagged `razon_fiable = True` carry an sx/sy ratio between 0.067 and 0.493
+  where the frame implies 1.125; in 512x512, 8 of 16 flagged reliable carry 3.24 to 11.15 where
+  1.5 is implied. Re-evaluating with the frame-implied ratio instead moves every absolute angle by
+  −19 % to −29 % in 512x512 and +30 % to +35 % in 1152x864, and the published device contrast
+  collapses: the control goes from 4.67 against 2.70 to **3.47 against 3.52**. Most of the
+  apparent difference in difficulty between the two groups was an artefact of the scale.
+- **The folds are frame formats, not verified devices.** They are defined by mask dimensions
+  (Wm, Hm). One scanner can emit several formats and one format can come from several scanners —
+  this repository documents 1200x800 mixing devices in `roi_scale.py`. Nothing in the released
+  data identifies the scanner or the subject, so "device" was an inference, and duplicate-image or
+  same-subject leakage across folds is **not verifiable** with what the competition publishes.
+
+**What survives.** The arm ordering *inside* each fold, which is unaffected because prediction and
+truth share the same `sy`; the oracle win in 512x512; the localisation failure in all five folds;
+and the free-reading result above. Within the 1152x864 fold this arm still does not beat the small
+control (2.62 ± 0.83 against 1.94 ± 0.10), though at 1.4 times the standard error it does not
+clearly lose either. **What does not survive** is any reading that compares absolute magnitudes
+between folds, including the word *device-dependent* as a claim about scanners. Only two folds were
+re-evaluated with the corrected ratio, so the corrected numbers above are a sensitivity result, not
+a new table: the GPU window for this project has lapsed and the full re-evaluation was not
+available before the deadline.
 
 ### 1.2 The ablation margin does not survive its own seed noise
 
@@ -124,12 +186,23 @@ NeuroPixel's orientation win in 512x512 and of its localisation failure — all 
 margins several times their seed spread — and the loss finding below, which is about the
 *ordering* of two read-outs and not about any margin.
 
-**The training loss ordered the arms backwards.** By masked cross-entropy on the selection
-group the hybrid was *worse* than the control in 4 of 5 folds. In millimetres and degrees it was
-better in 4 of 5. Selecting and concluding by the loss — the normal thing to do — would have
-published the opposite ordering of the arms. That disagreement is the finding, and it stands
-whether or not either margin clears its noise: two quantities that are supposed to track each
-other rank four architectures in opposite orders.
+**The training loss and the millimetres disagree on the ablation's own pair.** By masked
+cross-entropy on the selection group the hybrid was *worse* than the control in 4 of 5 folds. In
+millimetres and degrees it was better in 4 of 5. Selecting and concluding by the loss — the normal
+thing to do — would have published the opposite conclusion about the layer.
+
+**Narrowed on 7 November 2026**, and this is the second correction to this finding's wording. It
+used to say the loss ranks the four architectures *in the opposite order*. It does not. Mean
+selection loss: control 0.2267 < small 0.2500 < hybrid 0.2649 < NeuroPixel 0.3808. Mean thickness
+error: hybrid 4.63 < control 4.90 < small 5.31 < NeuroPixel 13.95. The rank correlation between
+the two is **+0.4, not negative**, and `NeuroPixelField` is last on both — so the two read-outs
+mostly agree, and what disagrees is the one comparison this study was built on. Two further limits
+belong with it: the loss is measured on the selection group and the millimetres on the reported
+fold, which are different populations; and the per-fold loss gaps between hybrid and control are
++0.0276, +0.0140, +0.1504, −0.0058 and +0.0049, three of them under 0.015 with no seed-noise
+measurement of their own. What survives is the practical warning — in this ablation the quantity
+being minimised would have selected the other arm — not a general claim that the loss inverts the
+ordering.
 
 For the record, the earlier correction still applies and is now doubly true: "best mean of the
 four arms" on the oracle angle was a reading of a column of means without pairing, and the
@@ -206,7 +279,11 @@ Nothing here changes section 1, and all of it was measured the same way.
   fold from the seed (`vg = usables[seed % 5]`). They are kept here with their figures, and §1.2
   states what they are worth: in both folds where seeds were added the hybrid–control difference
   sits inside its own noise, and in one the sign reverses. The remaining three folds are
-  re-queued. Read any count in this subsection as a one-seed count.
+  never ran. Read any count in this subsection as a one-seed count, and note that the audit of
+  7 November 2026 also found the per-arm image counts differ (e.g. 72/68/70/74 in 800x652, because
+  `evaluar2.py` only averages images where that arm's thickness is finite): recomputed on the
+  common subset of that fold the hybrid−control margin moves from +0.598 to +0.423 mm, a shift of
+  the same order as the 0.26 mm margin this subsection discusses.
 - **One fold carries 13 images.** The device groups range from 13 to 467 images with an
   aponeurosis mask (467, 139, 267, 13, 72) and from 43 to 424 with a fascicle mask. A mean over
   folds is not a mean over images, and the two checks this invites are reported in §1 rather
@@ -229,12 +306,24 @@ Nothing here changes section 1, and all of it was measured the same way.
   dominant orientation; FL cannot be measured at all because no image carries both mask types,
   so it is only bounded.
 - **Every millimetre and degree here is an optimistic upper bound** on what the test set would
-  give, because 88.3 % of test images show a single ruler and fall back to isotropy.
+  give, because most test images show a single ruler and fall back to isotropy. A second limit of
+  the same kind, recorded on 7 November 2026: `roi_scale.py` searches tick values of **2, 5 and
+  10 mm only**. The 1 mm correction exists solely as a per-group post-hoc patch computed from
+  *training* masks (`corregir_marca_por_mt.py`), so it cannot be applied to the test set at all,
+  and it only moved one group: 800x600 still sits at **38.61 mm** of median thickness, which is
+  why the "physiological 18 to 39 mm" range reaches 39. Corrected on
+  7 November 2026: the figure published here was 88.3 %, which counted the images with no readable
+  scale at all as single-ruler ones. Measured on `scale_all.csv`: of 309 test images **5.2 % have
+  two legible rulers, 75.7 % have one, and 19.1 % have no readable scale**.
 - **The control is not a ResNet-34.** `modelos.Control` tries `segmentation_models_pytorch`
   first and silently fell back to the project's own 1.95 M U-Net, because the library is not
   installed on the training host — the parameter count gives it away against a ResNet-34's
   ~24 M. Earlier text in this file called it a "professional ResNet-34 control". The fallback
-  now prints a warning and each model records which body it ran.
+  now prints a warning on construction. Corrected on 7 November 2026: this also said each model
+  *records* which body it ran, and it does not — `Control.cuerpo` is set in memory but never
+  written to the checkpoint or to the run JSON, so the body can only be inferred afterwards from
+  the parameter count (1 949 979, which does match this repository's own U-Net). The warning in
+  the job log is the primary evidence.
 - **The two read-outs are not a pessimistic/optimistic pair.** Measured, they are not ordered:
   in the 1152x864 fold the free read gives 1.19 deg and the oracle 2.32 deg, so the oracle is
   *worse*. The cause is a protocol bias, not the model: the reference is the dominant
@@ -427,10 +516,12 @@ confidently wrong. The deep aponeurosis is recovered correctly (median slope −
 `PA = |a_f − a_d|` lands near 1 deg, the `pa_lo = 5` clip lifts it, and `FL = MT / sin(5 deg)`
 = 11.5 × MT hits the ceiling in **18 of 30** images.
 
-This is §1.1 taken to its limit rather than a new defect: an orientation head that wins on one
-device (1.42 ± 0.23 deg) and does not win on another does not transfer to scanners it has never
-seen. The capability is real and device-bound, and the test set is built from devices absent from
-training.
+This is §1.1 taken to its limit rather than a new defect: an orientation head that needs the
+fascicle mask to reach 1.42 ± 0.23 deg has nothing to fall back on when it has to find the
+fascicles itself, which is exactly the free-reading column where it is the worst of the four arms.
+The test set is built from frame formats absent from training. Narrowed on 7 November 2026: the
+earlier wording made this a claim about *scanners*, and neither the fold definition nor the
+absolute magnitudes support that (§1.1).
 
 Two hypotheses tested and **refuted** on the way, both kept because the wrong ones are part of
 the measurement:
@@ -452,14 +543,41 @@ and changes nothing else — no tuned threshold ("PA hit the clip" is a binary c
 formula) and MT untouched, being a direct measurement of the two curves.
 
 Submitted. **4.44858 → 2.69767**, a drop of **1.751, or 39.4 %**. So that much of the own
-pipeline's score was the clip artefact and the remaining 2.70 is the model genuinely failing to
-transfer. Of 309 test images, 184 had FL pinned at the ceiling before and none after.
+pipeline's score was the clip artefact. Of 309 test images, 184 had FL pinned at the ceiling
+before and none after.
+
+**What the remaining 2.70 is, corrected on 7 November 2026.** This paragraph used to attribute it
+to the model failing to transfer. The independent audit decomposed it per image against the public
+ensemble as a stand-in for the hidden truth — a decomposition that reproduces both real scores to
+within 5 %, better than the median-difference version published in §6 — and the largest term is
+**thickness at 56 %**, with fascicle length at 31 % and pennation angle at 13 %. Thickness is what
+§5.2 and §6 already attribute to **uncorrected absolute scale** on the test set, not to the
+orientation head. So the honest split is: the clip artefact was 39 % of the original score, scale
+is the largest single term in what is left, and the orientation head's failure to transfer is real
+but is not the dominant term. This is the same class of error as the one recorded in §5.4 about
+the 4.45: proposing a cause without checking that it produces the magnitude observed.
 
 Two things worth stating about this number:
 
 - **Only 56 of 309 images (18 %) yield a real measurement.** 61 do not resolve the geometry at
-  all and 192 land in a clip, so the submission is mostly the fallback. That is what the pipeline
-  can honestly say about this test set, and it is the more informative version of "4.45".
+  all and 192 land in a clip, so the submission is mostly the fallback. Measured on the submitted
+  file after the audit: **253 of the 309 rows (81.9 %) carry the identical constant fascicle
+  length of 70.0 mm** and 39.8 % carry the identical pennation angle of 15.0 deg. So 2.69767 is
+  mostly the score of a physiological constant, and the model is being graded on under a fifth of
+  the test set. That is what the pipeline can honestly say about this test set, and it is the more
+  informative version of "4.45". The audit also found that `envio_sin_saturar.py` applies a second
+  substitution condition beyond the documented "PA hit the clip" one, covering 130 of the 192
+  substitutions: the undocumented condition is `FL >= 199.99 or FL <= 30.01 -> 70 mm`, alongside
+  the documented "PA hit the clip" one. The script's behaviour is as published but its description
+  was incomplete.
+
+  The same audit narrowed a second statement. "Nothing calibrated against the public leaderboard"
+  is true of the coefficients — there is no leaderboard-fitted parameter anywhere in this
+  repository — but it is too broad as written: the *decision* to stop propagating the clip was
+  taken after seeing the 4.44858 the leaderboard returned, and the fallback constants
+  (15 deg, 70 mm, 20 mm) cannot be shown to be independent of the public ensemble's medians
+  (15.92 / 87.10 / 20.83) without the decision history from before 31 October. `infer.py` already
+  carried that fallback on 31 October, which is evidence for independence but not proof of it.
 - **My own forecast was wrong by a point.** Using the public ensemble as a stand-in for the hidden
   truth predicted ~1.73; the real value is 2.70. The ensemble is a decent reference for ranking
   the error terms — it did identify FL correctly — but it is not a proxy for the truth, and

@@ -82,7 +82,7 @@ def main():
     import pandas as pd
     import imutil as U
     import modelos
-    ck = torch.load(a.ckpt, map_location="cpu", weights_only=False)
+    ck = torch.load(a.ckpt, map_location="cpu", weights_only=True)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     kw = {"steps": ck.get("steps", 16)} if ck["arch"] in ("neuropixel", "hybrid") else {}
     model = modelos.build(ck["arch"], ck["vocab"], **kw)

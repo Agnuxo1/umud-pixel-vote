@@ -81,7 +81,12 @@ def ang_libre(p):
 
 
 def ang_oracle(p, msk):
-    """Orientacion pesada por la mascara verdadera: limite optimista del cabezal."""
+    """Orientacion pesada por la mascara verdadera.
+
+    Es la lectura "oraculo": usa la etiqueta, asi que NO es una capacidad del sistema acabado.
+    CORRECCION 7-11-2026: esta linea la llamaba "limite optimista", descripcion retractada en la
+    cabecera de este fichero y en RESULTS.md 5.1 porque en los cuatro brazos de 1152x864 la
+    lectura oraculo sale PEOR que la libre. Es otra lectura, no una cota."""
     w = (msk > 0).astype(np.float32)
     if w.sum() <= 0:
         return np.nan
