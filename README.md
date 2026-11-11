@@ -20,6 +20,10 @@ License: **GPL-3.0** (the licence the competition requires of winning submission
 
 **Contents** — [Results](#results) · [The problem, and why it is not just segmentation](#the-problem-and-why-it-is-not-just-segmentation) · [Background](#background) · [What this repository contains](#what-this-repository-contains) · [The hypothesis under test: NeuroPixel as a per-pixel voting field](#the-hypothesis-under-test-neuropixel-as-a-per-pixel-voting-field) · [Reproducing](#reproducing) · [Attribution](#attribution) · [Observations](#observations) · [Real-world applications](#real-world-applications) · [Possible improvements](#possible-improvements) · [Future work](#future-work) · [Bibliography](#bibliography)
 
+<!-- impact-note:start -->
+<sub><strong>Efficiency and practical value.</strong> A specialised per-pixel orientation head investigates whether a smaller representation can answer a focused ultrasound question efficiently. With a supplied fascicle mask on the documented 512-pixel device, the repository reports better angular error using far fewer parameters than its U-Net control. The advantage does not generalise to every device or muscle-thickness task. See the <a href="RESULTS.md">ablations and limitations</a>.</sub>
+<!-- impact-note:end -->
+
 ## Results
 
 <p align="center"><img src="docs/readme/02-results-mt.gif" alt="Heatmap of muscle-thickness error in millimetres for four architectures across five device folds" width="100%"><br><sub>Fig. 1 — MT error by fold, lower is better. Data: RESULTS.md §1.</sub></p>
