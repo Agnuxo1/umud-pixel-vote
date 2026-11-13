@@ -1,0 +1,33 @@
+name: UMUD physics ablation checks
+
+on:
+  push:
+    paths:
+      - "physics_consistency_ablation.py"
+      - "tests/test_physics_consistency_ablation.py"
+      - ".github/workflows/test-physics-ablation.yml"
+  pull_request:
+    paths:
+      - "physics_consistency_ablation.py"
+      - "tests/test_physics_consistency_ablation.py"
+      - ".github/workflows/test-physics-ablation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check syntax
+        run: python -m py_compile physics_consistency_ablation.py tests/test_physics_consistency_ablation.py
+      - name: Run synthetic tests
+        run: python -m unittest discover -s tests -v
