@@ -16,7 +16,7 @@ thickness (MT)** from single B-mode ultrasound frames, for the
 (Swissuniversities, Kaggle, closes 2026-11-14).
 
 Author: Francisco Angulo de Lafuente ([Agnuxo1](https://github.com/Agnuxo1)).
-License: **GPL-3.0** (the licence the competition requires of winning submissions).
+License: **GPL-3.0** (the OSI-compatible licence selected for this repository; the competition requires an OSI-compatible open-source licence, not GPL-3.0 specifically).
 
 **Contents** — [Results](#results) · [The problem, and why it is not just segmentation](#the-problem-and-why-it-is-not-just-segmentation) · [Background](#background) · [What this repository contains](#what-this-repository-contains) · [The hypothesis under test: NeuroPixel as a per-pixel voting field](#the-hypothesis-under-test-neuropixel-as-a-per-pixel-voting-field) · [Reproducing](#reproducing) · [Attribution](#attribution) · [Observations](#observations) · [Real-world applications](#real-world-applications) · [Possible improvements](#possible-improvements) · [Future work](#future-work) · [Bibliography](#bibliography)
 
