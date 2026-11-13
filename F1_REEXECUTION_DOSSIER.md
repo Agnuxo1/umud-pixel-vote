@@ -35,7 +35,7 @@ F1 = (Own family + Honghanhhh + Soukeaizenz) / 3
 
 How each licence was established: the Kaggle API exposes no licence field for notebooks, so each
 one was read from its public notebook page. The two third-party notebooks and the watehell notebook
-all carry **Apache 2.0**, which is compatible with the GPL-3.0 the winner licence requires. What is
+all carry **Apache 2.0**, which is compatible with the GPL-3.0 selected for this repository; the contest requires an OSI-compatible open-source licence, not GPL-3.0 specifically. What is
 **still outstanding**: confirming that the licence shown today is the licence of the notebook
 *version* these predictions came from.
 
